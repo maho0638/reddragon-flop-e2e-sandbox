@@ -1,0 +1,104 @@
+name: FLOP isolated Chromium E2E
+on:
+  workflow_dispatch:
+    inputs:
+      run_production_acceptance:
+        description: "Safety lock: keep false; production acceptance is not run"
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: flop-e2e-9bbc626
+  cancel-in-progress: false
+jobs:
+  local-browser-e2e:
+    if: ${{ github.ref == 'refs/heads/qa/flop-e2e-9bbc626' && github.event_name == 'workflow_dispatch' && inputs.run_production_acceptance == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (no persisted credentials)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify isolated FLOP source SHA-256 manifest
+        run: |
+          echo "SOURCE_FIX_COMMIT=cf70bfc463d6a7b44e273c92ec80602f92d9248b"
+          echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
+          sha256sum --check <<'SHA256'
+          5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
+          ad41cc06420fb4330038c25ea41dfbacfbb8e698a177081c8f3a7576092efffa  api/flop-status.js
+          9a63745452c91f7098d31d5652c3d304aa3ba6c77bb0ca97b5d8945dcbd6b52b  api/relay.js
+          6f0fd0ad865f64f210fbfbebd3478fefa659c91755a40f4df8749f13e44c7b54  package.json
+          cd3b30609ec12e468807f805c2666b0e2eb9d312b098b40ef4fb41a67e4c0332  public/404.html
+          9945c501cc2439e13bd761796548fb8ab59becf76b5a67cb97dbdc991f258975  public/activity-proof.js
+          9d08c13844b613284666a437c728e1bdda7101d5993ac63bcd803638eb3677e8  public/agent-field.css
+          84f37a6630405cc0254d939ca3dad3ee2b18fd6ef867225136d7140fc36a6376  public/agent-field.js
+          5315195758a40b7d826faa7f0d6ec28a7f55566d58bf1f7c6350fc9a95905b18  public/app.js
+          a0fd7d3cb01cd349de100ce1d8bb056026d36471d68f391c35374b3eda7de43a  public/assets/reddragon.jpg
+          367095779728296c9f9adabcc79d7eb0d005b5cc096df3eacf5695c54c37c608  public/community-positioning.js
+          01457a6db1388beb2a016b0746ef945ecfea73ff1248c733711706e16381aca2  public/config.js
+          20c8be2aa94e9448131c931ee3258d38be24874543002b465c5a599835dc86e2  public/contribution-edit-fix.js
+          57c25d847c5535bfc0b3b413e1c99a877a60edf524c94a2e0880b8e60bcff14b  public/did-provenance.css
+          ee359fea7b23d686af5303eb88f09a1712c34d3fffcb72761f972bea4ee24b70  public/did-provenance.js
+          c1c76c95a213325242ef2ff76caf0682e45512ab9ad2bcd79d076b4300ea91f8  public/enhancements.css
+          4193a470114f844b87a8c9df0eb91190a4524d049c905e189c7142d18cbbcc5a  public/enhancements.js
+          e03ef2dd2b65d92a64f0aba8e32437a1aaf621b80bf2fc49826224a6fb970671  public/final-fixes.js
+          307099f92e0f5497e78a542f457c44afa9bb9310d5780b6c6744b571ccd6d531  public/flop-did-utils.js
+          335667ba89c20eb897a2f57bc02fb7e627aea2fdfb22e438dbdd7b640aedc591  public/flop-live-status.js
+          afb147a61c1b6bb64eaf2be6d20da883b1db6e708723e7b906edd84e74858828  public/flop-responsive-fixes.css
+          c7facc8dba5d919ddfd3a3c1d54faa2643f467b8617010d1685603233a5dfa89  public/flop-source-status.json
+          8bf24dd153387aecb35f82abada4955828b1ef80f9ce6454a29a1c5609b55f69  public/flop-spec-refresh.js
+          69fb10422e5548154a5772bcb32ac0ce11110f22a0f4b9a2d0e3b9e55ff8415d  public/flop.css
+          a400e1d85145643d747fa4e88c2759c4e71146c9c267c412dc3007c59cadf18e  public/flop.html
+          dd13136723d04c8554b5c23b280e13fa1e3a5be7c49472e9db5d0c4be942f2c6  public/index.html
+          c93940db073182b505b8cfec841690f3a58948ee338ae316d3df916807769780  public/language-bootstrap.js
+          d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
+          1f6d6f76d5228cb4dd2b1c3b5ff004565fc10e77c124a857c21345201d5b7598  public/language-safe.js
+          004196845357912f522fe55796ce1011a8beb7342efb95d89438c95e2f73a561  public/language-stable.css
+          7138c847f4ee40bd61338608b2fefa5ba28cbc2cd408fa3293b7f783660b5998  public/language-stable.js
+          cb3dd30f5dd7b2a6054ec2260018d2e43daece5ff7de428b2d70cacfe2f27dac  public/language.js
+          a4db72c11f8ee57348af27d7e391eb013d5564d21ef1c3683a4d784d6941db67  public/live-observatory.css
+          e95b0c153ca2f26117585c64bb3d00d493d5fddf570494ec67d3f85bd6b101c0  public/live-observatory.js
+          ee1b237b7c24094e11304bc97b9212ff1ffbb7bd410c4678049c11edd3214dc3  public/llms.txt
+          ab0b0d28210f47bef2549373cd7b507959e367b55a0e36d54bfc7eafe84e1574  public/patches.js
+          1f18fdc1e8e23f21d9930a77ccb1faddaf3cef6ec386366923aa5e1d9ba0a282  public/progress-scope-fix.js
+          8a575e0afee7010294049d29bfe3e7a71d6ee65d17b51a5dc27402378ed28e76  public/proof-import.js
+          b31b77a71b4b2c9e228cb21685eb5394a84afb4eb17d2cae20e8544a89471e29  public/provenance-room-refresh.js
+          959987ae51aef48506a2f70b2102d4e6368869ae2926f66f01ffab24581a8d17  public/public-state.js
+          6a01e0ef3f01ce9ff13dd6cf10df1d84a1a2185f8833a15bdbbdf8984e36f17f  public/reddragon-contribution.json
+          6e183a18293b801a9a731ef540ef49824fa8347f2086902cd727782fa50aa681  public/repair.js
+          56267be8b5f9c7afa11ae29de5ce98cc88164e49bef2462def1acf4a735e0df8  public/responsive-fixes.css
+          dc92f47dac58f4cf804d72ec63b81ec617f2306a7618e307fde1b92083c4e200  public/robots.txt
+          369c3921831f6c14c19477e57e37f7c916317c1182b85d96b89319b221df2c29  public/sitemap.xml
+          6b7d78c4212de0f8b59669058b54551e6148325c28f3e57b8946d564b9d577b0  public/styles.css
+          cd24ee7d5139c2415e1c8309291211d9ad552a630c31096815e3c47161cbe203  public/tclk-workbench.css
+          aceff90aef6ee44e372831e958309e065f5754f909159ca7b1cfe1add6fe1293  public/tclk-workbench.js
+          6a4f59e867156df58efd64c6be227e12ea003087fc1d68c548784b7eb901a4c6  public/technocore-capacity.js
+          b969a17949b3d5a6cbe9c74d0b8a71700e91d253b8c1951fbede952c06304487  public/testnet-toolkit.css
+          b51d4afa9b2530a4515b3366fe1d7bf1c7bb832ec0fef1c209adca333c0db609  public/testnet-toolkit.js
+          d671bc6ede6296f3c4f208857872c4fdfbaf1b134ac5239abd1513d0a2d8aef9  public/ui-i18n.js
+          5af83c5a816ee82d50bdd12f9d6423e0b2e6d6443db714745b28c0d047ad80ef  scripts/browser/flop-ui.spec.mjs
+          fa9a51ca1e1d050118160311a505af718284c3d51e8d6ceae07a7c7f5c1b5e4e  scripts/browser/site-acceptance.spec.mjs
+          ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
+          2f0316d3f32dda2d5fb76c461e13e76fbd05399c430e5dcbb56cb0672bc6d0a9  scripts/local-preview-http-smoke.mjs
+          6c3346bae6f28b45a548c7c31ac5508e8e1894d0a5bf32e71ab6bec4686bf799  scripts/local-preview-server.mjs
+          65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
+          8214ef58acd328ce22b9c2331492e29ec9ab65780ecf61c1041ee444974a465b  scripts/ui-i18n.test.mjs
+          SHA256
+      - name: Install pinned Playwright package
+        run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1
+      - name: Install Chromium for this ephemeral runner
+        run: npx playwright install --with-deps chromium
+      - name: Verify local preview denies relay writes
+        run: npm run test:local-preview
+      - name: Run focused DID, relay, and localization regressions
+        run: npm run test:security-regressions
+      - name: Run local-only Chromium E2E (mock relay, synthetic DID)
+        run: npm run test:browser

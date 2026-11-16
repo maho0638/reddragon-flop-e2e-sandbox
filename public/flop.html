@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="/language-bootstrap.js"></script>
+  <meta name="color-scheme" content="dark" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="description" content="Independent FLOP community observatory: authoritative Yellow Paper tracking, source drift, testnet readiness, agent allocation status, and verifiable Technocore/TCLK tooling." />
+  <meta name="author" content="RedDragon" />
+  <link rel="canonical" href="https://reddragon-technocore.vercel.app/flop" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="RedDragon FLOP Community Observatory" />
+  <meta property="og:title" content="FLOP Community Observatory · RedDragon" />
+  <meta property="og:description" content="Track FLOP from authoritative sources: Yellow Paper status, testnet readiness, agent allocation, creator opportunities, Technocore and TCLK tools." />
+  <meta property="og:url" content="https://reddragon-technocore.vercel.app/flop" />
+  <meta property="og:image" content="https://reddragon-technocore.vercel.app/assets/reddragon.jpg" />
+  <meta property="og:image:alt" content="RedDragon FLOP Community Observatory" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FLOP Community Observatory · RedDragon" />
+  <meta name="twitter:description" content="Authoritative-source FLOP tracking, testnet readiness and verifiable agent tooling." />
+  <meta name="twitter:image" content="https://reddragon-technocore.vercel.app/assets/reddragon.jpg" />
+  <title>FLOP Community Observatory · RedDragon</title>
+  <link rel="stylesheet" href="/flop.css" />
+  <link rel="stylesheet" href="/flop-responsive-fixes.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/flop"><span class="mark">RD</span><span><b>RedDragon</b><small>FLOP Community Observatory</small></span></a>
+    <nav>
+      <a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">Yellow Paper</a>
+      <a href="https://flop.finance/intro/agent/" target="_blank" rel="noopener noreferrer">Agent</a>
+      <a href="https://gpus.flop.finance/" target="_blank" rel="noopener noreferrer">GPU Market</a>
+      <a href="/">Agent Lab</a>
+      <a href="https://x.com/lionmousse" target="_blank" rel="noopener noreferrer">@lionmousse</a>
+      <label class="lang-pick"><span class="sr-only">Language</span><select id="rdFlopLanguage" aria-label="Language"><option value="en">EN</option><option value="tr">TR</option></select></label>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="kicker">INDEPENDENT COMMUNITY TOOL · SOURCE-FIRST · NO AIRDROP GUARANTEES</p>
+        <h1>Track FLOP without guessing.</h1>
+        <p class="lead">A public observatory for FLOP builders, agents and testnet participants. It separates live authoritative protocol facts from stale mirrors or provisional overview copy, highlights unresolved mechanics, and links every important claim back to official FLOP sources.</p>
+        <div class="actions">
+          <a class="primary" href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">Read authoritative Yellow Paper</a>
+          <a class="secondary" href="/">Open verifiable Agent Lab</a>
+        </div>
+        <p class="notice"><strong>Independent community project.</strong> Not affiliated with, endorsed by, or operated by FLOP Labs. FLOP Labs remains the authority for official network rules and eligibility.</p>
+      </div>
+      <img src="/assets/reddragon.jpg" alt="RedDragon community observatory" />
+    </section>
+
+    <section class="status-grid" aria-label="FLOP source status">
+      <article class="status-card good">
+        <span>AUTHORITATIVE SPEC</span>
+        <h2>Yellow Paper v0.5.0</h2>
+        <p>The live FLOP Yellow Paper is the authoritative implementation specification. It remains a draft/iterating spec and now carries D-0440 tokenomics.</p>
+        <a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">Official source →</a>
+      </article>
+
+      <article class="status-card good">
+        <span>GENESIS SUPPLY · D-0440</span>
+        <h2>4.4B FLOP</h2>
+        <p>1.2B miner · 1.2B validator · 1.2B agent · 800M ecosystem/incentives reserve.</p>
+        <a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">§9 / Appendix A →</a>
+      </article>
+
+      <article class="status-card good">
+        <span>SPEC MIRROR · CONTENT UPDATED 26 OCT</span>
+        <h2 id="rdPaperSyncTitle">GitHub paper content is newer than live page</h2>
+        <p id="rdPaperSyncText">The live page says updated 24 September; GitHub's Yellow Paper file changed 26 October. The repository head from 5 November is CI-only.</p>
+        <a href="https://github.com/flop-labs/yellowpaper/commits/main/yellowpaper.md" target="_blank" rel="noopener noreferrer">Yellow Paper file history →</a>
+      </article>
+
+      <article class="status-card warn">
+        <span>AIRDROP CONVERSION · E.38 OPEN</span>
+        <h2>Scoring and conversion remain open</h2>
+        <p>Yellow Paper R8.7–R8.8 now specify the 3:1 Agent unlock rule: one FLOP of locked grant principal unlocks per three FLOP of eligible, finalized locked-grant compute payables, with locked spending capped at 75% of the grant. This is a <em>mainnet grant rule</em>, not an airdrop estimate from testnet spending. E.38 still leaves conversion scoring, caps and identity rules unresolved; implementation is partial.</p>
+        <a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">Verify E.38 →</a>
+      </article>
+
+      <article class="status-card">
+        <span>AGENT GENESIS ALLOCATION</span>
+        <h2>1.2B FLOP</h2>
+        <p>The current draft allocates 1.2B FLOP to the agent genesis cohort, not to any individual agent. Conversion scoring, snapshot and anti-fraud rules are separate from the locked-grant unlock mechanism and remain subject to E.38.</p>
+        <a href="https://flop.finance/intro/agent/" target="_blank" rel="noopener noreferrer">Official agent page →</a>
+      </article>
+
+      <article class="status-card">
+        <span>PUBLIC TESTNET · NOT RELEASED</span>
+        <h2>Planned / unreleased</h2>
+        <p>Checked 10 November 2026: FLOP's official operator hub still marks public testnet as planned and its release as unreleased. Public testnet launch is not confirmed. Devnet is a separate network; the 3 November date was only a working target.</p>
+        <a href="https://docs.flop.network/networks/testnet" target="_blank" rel="noopener noreferrer">Live official testnet status →</a>
+      </article>
+
+      <article class="status-card good">
+        <span>KOL / CREATOR APPLICATION</span>
+        <h2>Check official status</h2>
+        <p>Application availability can change. The 800M reserve is a cohort-level amount, and no individual reward is guaranteed.</p>
+        <a href="https://flop.finance/apply/kol" target="_blank" rel="noopener noreferrer">Official application →</a>
+      </article>
+
+      <article class="status-card good">
+        <span>GPU MARKET MONITOR</span>
+        <h2>Official market monitor</h2>
+        <p>FLOP publishes a rentable-GPU market monitor. This is market data, not a testnet faucet or miner-reward guarantee.</p>
+        <a href="https://gpus.flop.finance/" target="_blank" rel="noopener noreferrer">Open GPU market →</a>
+      </article>
+      <article class="status-card warn">
+        <span>DEVNET · DEVELOPMENT ONLY</span>
+        <h2>Public endpoints; restricted enrollment</h2>
+        <p>FLOP's operator network page publishes development endpoints and says enrollment requires separate checks. The official timeline FAQ, updated 30 October, says devnet earns nothing and has no reward or airdrop weight; the live panel reports when that FAQ was last verified.</p>
+        <a href="https://docs.flop.network/networks/devnet" target="_blank" rel="noopener noreferrer">Official devnet status →</a>
+        <a href="https://docs.flop.network/docs/testnet-and-timeline" target="_blank" rel="noopener noreferrer">Official timeline and reward FAQ →</a>
+      </article>
+    </section>
+
+    <section class="live-center" id="flop-live-status" aria-labelledby="live-title" aria-live="polite">
+      <div class="section-heading"><div><p class="kicker">READ-ONLY SOURCE CHECK</p><h2 id="live-title">Live FLOP status</h2><p id="rdLiveSummary">Checking official FLOP sources. A source that cannot be checked remains unverified.</p></div><button id="rdRefreshStatus" type="button">Refresh status</button></div>
+      <p id="rdLiveChecked" class="live-meta">Last check: loading…</p>
+      <div class="live-grid">
+        <article class="live-card" id="rdLiveTestnet"><span>PUBLIC TESTNET</span><b data-status>Checking…</b><p data-detail>Official network identity and release status</p><a href="https://docs.flop.network/networks/testnet" target="_blank" rel="noopener noreferrer">Official testnet source ↗</a><a id="rdLiveTimelineLink" href="https://docs.flop.network/docs/testnet-and-timeline" target="_blank" rel="noopener noreferrer">Timeline / reward FAQ ↗</a></article>
+        <article class="live-card" id="rdLiveDevnet"><span>DEVNET</span><b data-status>Checking…</b><p data-detail>Development network; admission is separate</p><a href="https://docs.flop.network/networks/devnet" target="_blank" rel="noopener noreferrer">Official devnet source ↗</a></article>
+        <article class="live-card" id="rdLiveRpc"><span>READ-ONLY RPC CHECK</span><b data-status>Checking…</b><p data-detail>Only chain identity, node version and genesis hash are queried</p><a href="https://explorer.devnet.flop.network/validator" target="_blank" rel="noopener noreferrer">Network identity reference ↗</a></article>
+        <article class="live-card" id="rdLiveGateway"><span>GATEWAY / MODEL CATALOG</span><b data-status>Checking…</b><p data-detail>Read-only model list; no inference request is sent</p><a href="https://api.flop.network/v1/models" target="_blank" rel="noopener noreferrer">Official catalog ↗</a></article>
+        <article class="live-card" id="rdLivePackages"><span>SDK / CLI RELEASES</span><b data-status>Checking…</b><p data-detail>Versions and validator admission note</p><a href="https://docs.flop.network/docs/sdk-references" target="_blank" rel="noopener noreferrer">Official SDK references ↗</a></article>
+        <article class="live-card" id="rdLivePaper"><span>YELLOW PAPER / E.38</span><b data-status>Checking…</b><p data-detail>Public draft status and distinct GitHub file-history/repository-head dates</p><a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer">Official paper ↗</a></article>
+      </div>
+      <p id="rdLiveDisclaimer" class="live-disclaimer">Status checks do not submit transactions, sign, claim faucet funds, or run inference. A timeout or malformed response is shown as unverified.</p>
+    </section>
+
+    <section class="participation" id="join-guide">
+      <p class="kicker">PRACTICAL GUIDE · DEVNET IS NOT TESTNET</p><h2>What you can do now</h2>
+      <div class="guide-grid">
+        <article><h3>Start with devnet</h3><p>Use the published read-only model catalog or SDK/CLI documentation. A validator package exists, but joining is administrator-assisted and requires an operations contact, approval, funding and activation. Do not treat local activity as testnet credit.</p><a href="https://docs.flop.network/docs/sdk-references" target="_blank" rel="noopener noreferrer">SDK versions and examples ↗</a></article>
+        <article><h3>When public testnet opens</h3><p>First verify the official testnet identity, genesis, release, RPC, faucet and admission rules. The official onboarding guides are not permission to join the production testnet while they still say planned/unreleased.</p><a href="https://docs.flop.network/networks/testnet" target="_blank" rel="noopener noreferrer">Recheck official launch status ↗</a></article>
+        <article><h3>No GPU? You can still prepare</h3><p>Read the spec and SDK docs, build an agent against documented APIs, validate a public DID format, compare official source versions and track your own local checklist. GPU ownership is needed for miner operation, not for reading or SDK integration.</p><a href="https://docs.flop.network/docs/run-miner" target="_blank" rel="noopener noreferrer">Miner guide and role details ↗</a></article>
+        <article><h3>Rewards are not guaranteed</h3><p>Devnet has no reward or airdrop weight. A public DID, faucet note, model request, wallet balance or manually saved activity is not proof of eligibility. E.38 leaves important testnet-to-genesis conversion rules open.</p><a href="https://docs.flop.network/docs/airdrop-and-testnet-conversion" target="_blank" rel="noopener noreferrer">Official conversion status ↗</a></article>
+      </div>
+      <div class="tool-links"><a href="/">Open Agent Lab and existing DID tools</a><a href="https://docs.flop.network/docs/run-validator" target="_blank" rel="noopener noreferrer">Validator guide and current admission steps ↗</a><a href="https://docs.flop.network/docs/official-links" target="_blank" rel="noopener noreferrer">Check official links and scam guidance ↗</a></div>
+    </section>
+
+    <section class="why" id="technocore-capacity">
+      <div>
+        <p class="kicker">TECHNOCORE · LIVE PUBLIC CAPACITY</p>
+        <h2>Capacity signals, without pretending listed rooms are the whole service.</h2>
+        <p>Read-only live metadata from Technocore. The listed-room count can exclude unlisted/private rooms, so RedDragon treats listed occupancy as a lower bound rather than the enforced total. This directly tracks the capacity/observability problems discussed upstream.</p>
+        <p id="rdTcStatus" class="notice">Loading live Technocore metadata…</p>
+      </div>
+      <div class="feature-list">
+        <div><b id="rdTcRooms">—</b><span id="rdTcRoomCap">listed rooms</span></div>
+        <div><b id="rdTcNotes">—</b><span id="rdTcNoteCap">notes</span></div>
+        <div><b id="rdTcWindow">—</b><span>windowed messages across the returned room page</span></div>
+        <div><b id="rdTcUpdated">—</b><span>last successful/attempted refresh</span></div>
+      </div>
+      <div class="actions">
+        <a class="primary" href="https://github.com/flop-labs/technocore-chat/issues/253" target="_blank" rel="noopener noreferrer">Capacity issue #253</a>
+        <a class="secondary" href="https://github.com/flop-labs/technocore-chat/issues/260" target="_blank" rel="noopener noreferrer">Listed-count caveat #260</a>
+      </div>
+    </section>
+
+    <section class="why">
+      <div>
+        <p class="kicker">WHY THIS EXISTS</p>
+        <h2>Useful to the community because it makes uncertainty visible.</h2>
+        <p>FLOP is moving quickly. Community posts and even public mirrors can become stale while the live specification changes. This observatory is deliberately conservative: it labels draft/TBD items, keeps source links beside claims, and records the date of each verification pass.</p>
+      </div>
+      <div class="feature-list">
+        <div><b>Source-drift tracking</b><span>Detects when official public surfaces disagree with the live authoritative specification.</span></div>
+        <div><b>Testnet readiness</b><span>Tracks faucet/inference status without inventing endpoints or reward formulas.</span></div>
+        <div><b>Verifiable agent identity</b><span>Ed25519 DID, signed Technocore records and provenance checks.</span></div>
+        <div><b>TCLK PAPER workbench</b><span>Agent-to-agent coordination tooling built around FLOP Labs' public TCLK/Technocore ecosystem.</span></div>
+      </div>
+    </section>
+
+    <section class="machine">
+      <div>
+        <p class="kicker">FOR AGENTS, BUILDERS & REVIEWERS</p>
+        <h2>Human-readable and machine-readable.</h2>
+        <p>The current source status is published as JSON so other agents and tools can consume the same conservative facts used by this page.</p>
+      </div>
+      <div class="actions">
+        <a class="primary" href="/flop-source-status.json">Open source-status JSON</a>
+        <a class="secondary" href="https://github.com/maho0638/reddragon-technocore" target="_blank" rel="noopener noreferrer">Inspect source on GitHub</a>
+      </div>
+    </section>
+
+    <section class="sources">
+      <p class="kicker">OFFICIAL SOURCES USED</p>
+      <h2>Primary references</h2>
+      <div class="source-links">
+        <a href="https://flop.finance/intro/yellowpaper/" target="_blank" rel="noopener noreferrer"><b>FLOP Yellow Paper</b><span>Authoritative implementation specification</span></a>
+        <a href="https://flop.finance/intro/agent/" target="_blank" rel="noopener noreferrer"><b>FLOP Agent page</b><span>Current public agent mechanics and usage model</span></a>
+        <a href="https://flop.finance/teaser/" target="_blank" rel="noopener noreferrer"><b>FLOP Teaser</b><span>Public overview and testnet roadmap</span></a>
+        <a href="https://flop.finance/" target="_blank" rel="noopener noreferrer"><b>flop.finance</b><span>Official project entry point and applications</span></a>
+        <a href="https://gpus.flop.finance/" target="_blank" rel="noopener noreferrer"><b>FLOP GPU market</b><span>Official rentable-GPU market monitor</span></a>
+        <a href="https://github.com/flop-labs/yellowpaper" target="_blank" rel="noopener noreferrer"><b>flop-labs/yellowpaper</b><span>Public mirror synced to D-0440 on 24 September</span></a>
+        <a href="https://docs.flop.network/networks/testnet" target="_blank" rel="noopener noreferrer"><b>Official testnet network</b><span>Current launch, release and public admission status</span></a>
+        <a href="https://docs.flop.network/networks/devnet" target="_blank" rel="noopener noreferrer"><b>Official devnet network</b><span>Development-only admission status</span></a>
+        <a href="https://docs.flop.network/docs/testnet-and-timeline" target="_blank" rel="noopener noreferrer"><b>Testnet timeline FAQ</b><span>Working dates and Devnet reward distinction</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>RedDragon FLOP Community Observatory · <span id="rdFooterChecked">source check updates on page load</span></span>
+    <span>Community-built · source-first · no affiliation claim</span>
+  </footer>
+  <script src="/ui-i18n.js"></script>
+  <script src="/technocore-capacity.js"></script>
+  <script src="/flop-live-status.js"></script>
+</body>
+</html>

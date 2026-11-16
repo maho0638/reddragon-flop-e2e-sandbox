@@ -1,0 +1,261 @@
+const $ = (s) => document.querySelector(s);
+const patchText = (key, vars = {}) => window.RD_I18N.t(`patch.${key}`, vars);
+
+function showToast(message) {
+  const t = $("#toast");
+  if (!t) return;
+  t.textContent = message;
+  t.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+function shardedDidMeta(proof) {
+  if (!proof || typeof proof !== "object") return proof;
+  const fp = String(proof.fingerprint || "");
+  if (/^[0-9a-f]{16}$/.test(fp) && proof.didNote && proof.didNote.namespace === "did") {
+    proof.didNote = {
+      ...proof.didNote,
+      namespace: `did-${fp.slice(0, 2)}`,
+      key: fp.slice(2),
+      path: `/kv/did-${fp.slice(0, 2)}/${fp.slice(2)}`,
+      convention: "sharded DID note"
+    };
+  }
+  return proof;
+}
+
+function patchDidNoteDisplay() {
+  const out = $("#didNoteOut");
+  const fpNode = $("#vaultFp");
+  if (!out || !fpNode) return;
+  const apply = () => {
+    const fp = (fpNode.textContent || "").trim();
+    if (!/^[0-9a-f]{16}$/.test(fp)) return;
+    if (/^(Published|Yayınlandı) · \/kv\/did\//.test((out.textContent || "").trim())) {
+      out.textContent = patchText("publishedPath", { path: `/kv/did-${fp.slice(0, 2)}/${fp.slice(2)}` });
+    }
+  };
+  new MutationObserver(apply).observe(out, { childList: true, subtree: true, characterData: true });
+  apply();
+}
+
+function patchIdentityReadyMessages() {
+  const vaultDid = $("#vaultDid");
+  if (!vaultDid) return;
+
+  const apply = () => {
+    const did = (vaultDid.textContent || "").trim();
+    if (!/^did:key:z6Mk/.test(did)) return;
+
+    const replacements = [
+      ["#didNoteOut", /^(?:Create a DID first|Önce DID oluştur)\.?$/i, "readyDidNote"],
+      ["#helloOut", /^(?:DID required|DID gerekli)\.?$/i, "readyHello"],
+      ["#introOut", /^(?:DID required|DID gerekli)\.?$/i, "readyIntro"],
+      ["#publicRoomOut", /^(?:DID required|DID gerekli)\.?$/i, "readyRoom"],
+      ["#styleOut", /^(?:DID required|DID gerekli)\.?$/i, "readyStyle"],
+      ["#contribOut", /^(?:DID and contribution link required|DID ve katkı linki gerekli)\.?$/i, "readyContribution"]
+    ];
+
+    for (const [selector, pattern, key] of replacements) {
+      const node = $(selector);
+      if (node && pattern.test((node.textContent || "").trim())) node.textContent = patchText(key);
+    }
+  };
+
+  new MutationObserver(apply).observe(vaultDid, { childList: true, subtree: true, characterData: true });
+  document.addEventListener("click", () => setTimeout(apply, 0), true);
+  apply();
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+}
+
+function proofObject() {
+  try { return shardedDidMeta(JSON.parse($("#proofText")?.value || "{}")); }
+  catch { return null; }
+}
+
+function patchProofButtons() {
+  const copyBtn = $("#copyProof");
+  if (copyBtn) {
+    const b = copyBtn.cloneNode(true);
+    copyBtn.replaceWith(b);
+    b.onclick = async () => {
+      const p = proofObject();
+      if (!p) return;
+      const text = JSON.stringify(p, null, 2);
+      const box = $("#proofText");
+      if (box) box.value = text;
+      await copyText(text);
+      showToast(patchText("proofCopied"));
+    };
+  }
+
+  const dlBtn = $("#downloadProof");
+  if (dlBtn) {
+    const b = dlBtn.cloneNode(true);
+    dlBtn.replaceWith(b);
+    b.onclick = () => {
+      const p = proofObject();
+      if (!p) return;
+      const fp = String(p.fingerprint || "proof");
+      const blob = new Blob([JSON.stringify(p, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reddragon-proof-${fp}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+  }
+}
+
+function patchRestoreFlow() {
+  const input = $("#restoreInput");
+  const identityOut = $("#identityOut");
+  const steps = $("#steps");
+  if (!input || !identityOut || !steps) return;
+
+  let restoreAttempt = false;
+  let restoredBackupVerified = false;
+
+  input.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const name = String(file.name || "").toLowerCase();
+
+    if (name.includes("reddragon-proof") || name.startsWith("proof")) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      input.value = "";
+      showToast(patchText("backupProofFile"));
+      return;
+    }
+    if (!name.endsWith(".json")) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      input.value = "";
+      showToast(patchText("backupJsonOnly"));
+      return;
+    }
+    if (file.size > 128 * 1024) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      input.value = "";
+      showToast(patchText("backupTooLarge"));
+      return;
+    }
+    restoreAttempt = true;
+  }, true);
+
+  function syncRestoredBackupUi() {
+    if (!restoredBackupVerified) return;
+
+    const s2 = $("#s2");
+    if (s2) {
+      const done = window.RD_I18N.t("app.done");
+      if (s2.textContent !== done) s2.textContent = done;
+      if (!s2.classList.contains("done")) s2.classList.add("done");
+    }
+
+    const chip2 = document.querySelector('[data-stepchip="2"]');
+    if (chip2 && !chip2.classList.contains("done")) chip2.classList.add("done");
+
+    const card2 = document.querySelector('[data-step="2"]');
+    if (card2 && !card2.querySelector(".rd-restore-ok")) {
+      const note = document.createElement("div");
+      note.className = "result rd-restore-ok";
+      note.textContent = patchText("backupRestoredNote");
+      card2.appendChild(note);
+    }
+
+    const doneCount = [...document.querySelectorAll('[data-stepchip]')]
+      .filter((chip) => Number(chip.dataset.stepchip) <= 10 && chip.classList.contains("done")).length;
+    const pct = Math.round(doneCount / 10 * 100);
+    const ring = $("#progressRing");
+    if (ring) {
+      ring.style.setProperty("--pct", `${pct}%`);
+      const strong = ring.querySelector("strong");
+      if (strong && strong.textContent !== `${pct}%`) strong.textContent = `${pct}%`;
+    }
+  }
+
+  const identityObserver = new MutationObserver(() => {
+    const text = identityOut.textContent || "";
+    if (!/did:key:z6Mk/.test(text)) return;
+
+    const p1 = $("#pass1");
+    const p2 = $("#pass2");
+    if (p1) p1.value = "";
+    if (p2) p2.value = "";
+
+    if (restoreAttempt) {
+      restoreAttempt = false;
+      restoredBackupVerified = true;
+      syncRestoredBackupUi();
+      showToast(patchText("backupRestoredToast"));
+    }
+  });
+  identityObserver.observe(identityOut, { childList: true, subtree: true, characterData: true });
+
+  new MutationObserver(() => queueMicrotask(syncRestoredBackupUi))
+    .observe(steps, { subtree: true, attributes: true, attributeFilter: ["class"] });
+
+  document.addEventListener("click", () => {
+    if (restoredBackupVerified) setTimeout(syncRestoredBackupUi, 0);
+  }, true);
+}
+
+function patchSecurityNote() {
+  const note = document.querySelector(".rd-security-note");
+  if (!note) return;
+  const heading = document.createElement("b");
+  heading.textContent = patchText("securityHeading");
+  note.replaceChildren(heading, document.createTextNode(patchText("securityBody")));
+}
+
+async function reliableRelayStatus() {
+  const live = $(".live");
+  if (!live) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const r = await fetch("/api/relay", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "health" }),
+      signal: controller.signal
+    });
+    if (!r.ok) throw new Error(String(r.status));
+    live.lastChild.textContent = patchText("relayOnline");
+    live.classList.remove("rd-status-bad");
+    live.classList.add("rd-status-ok");
+  } catch {
+    live.lastChild.textContent = patchText("relayOffline");
+    live.classList.remove("rd-status-ok");
+    live.classList.add("rd-status-bad");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+window.addEventListener("load", () => {
+  patchDidNoteDisplay();
+  patchIdentityReadyMessages();
+  patchProofButtons();
+  patchRestoreFlow();
+  patchSecurityNote();
+  setTimeout(reliableRelayStatus, 500);
+});

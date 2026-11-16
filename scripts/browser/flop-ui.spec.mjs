@@ -1,0 +1,562 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+import { after, before, test } from "node:test";
+
+const require = createRequire(import.meta.url);
+const { chromium } = require("playwright");
+const didRedDragon = "did:key:z6MkuhrsP4tDZjWYdZLPxaur19WvrF1yuLGsGB2S8Q1gwS6K";
+const didOther = "did:key:z6MkqEhk421dSv8pEnDvWVPatEMegY2RgXU2ksDw5pbUbU48";
+const viewports = [
+  { name: "desktop", width: 1440, height: 1000, isMobile: false },
+  { name: "tablet", width: 768, height: 900, isMobile: true },
+  { name: "mobile-390", width: 390, height: 844, isMobile: true },
+  { name: "mobile-320", width: 320, height: 740, isMobile: true }
+];
+const statusFixture = {
+  schema: "reddragon-flop-live-status/v1", checkedAt: "2026-11-10T12:00:00.000Z", stale: false,
+  testnet: { state: "not-live", release: "next (unreleased)" },
+  devnet: { state: "public-development-network", rewards: "none", operatorEnrollment: "administrator-assisted / public self-service unavailable" },
+  timeline: { state: "verified", updated: "2026-10-30", testnetTarget: "Tuesday 3 November 2026", testnetOpenClaim: true, devnetRewards: "none" },
+  services: { rpc: { state: "verified" }, gateway: { state: "catalog-responded", count: 2 }, validator: { state: "verified" } },
+  packages: { state: "verified-from-docs", versions: [{name:"@flop/sdk",version:"1.2.3"}], validatorPackage: "0.4.1-devnet.1", validatorManualVersion: "0.4.0-devnet.1", validatorAdmission: "administrator-assisted" },
+  yellowPaper: { state: "verified", livePageUpdated: "2026-09-24", contentVsCiDistinguished: true, githubContentCommit: { date: "2026-10-26T12:00:00.000Z" }, githubRepositoryHead: { date: "2026-11-05T12:00:00.000Z", message: "ci: fixture" } },
+  token: { state: "verified", claim: "no token yet" }
+};
+
+let browser;
+let server;
+let baseURL;
+let serverStdout = "";
+let serverStderr = "";
+
+async function waitForServer(child, url) {
+  const deadline = Date.now() + 8_000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`Local preview exited: ${serverStderr || serverStdout}`);
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(500) });
+      if (response.ok) return;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Local preview did not start: ${serverStderr || serverStdout}`);
+}
+
+async function newPage(viewport, preferredLocale) {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    locale: "en-US",
+    isMobile: viewport.isMobile,
+    hasTouch: viewport.isMobile,
+    permissions: ["clipboard-read", "clipboard-write"]
+  });
+  await context.addInitScript((locale) => {
+    if (!sessionStorage.getItem("__rdBrowserSmokeInitialized")) {
+      localStorage.clear();
+      if (locale === "tr" || locale === "en") localStorage.setItem("reddragon-lang", locale);
+      sessionStorage.setItem("__rdBrowserSmokeInitialized", "1");
+    }
+    window.__rdAcceptanceAddonsReady = false;
+    window.addEventListener("rd:addonsready", () => { window.__rdAcceptanceAddonsReady = true; }, { once: true });
+  }, preferredLocale);
+  await context.route("**/api/flop-status", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(statusFixture)
+  }));
+  await context.route("**/api/relay", (route) => {
+    const payload = JSON.parse(route.request().postData() || "{}");
+    const action = payload.action;
+    if (action === "kvGet" && payload.key === "d-browser-missing-room") {
+      return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: "external record absent" }) });
+    }
+    const bodies = {
+      health: { ok: true, technocore: true }, rooms: { rooms: [] }, config: {},
+      read: { messages: [], next: null }, kvGet: { value: null }
+    };
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(bodies[action] || { ok: true }) });
+  });
+  return { context, page: await context.newPage() };
+}
+
+async function waitForAddonsReady(page) {
+  await page.waitForFunction(() => window.__rdAcceptanceAddonsReady === true, null, { timeout: 30_000 });
+}
+
+async function activate(locator, viewport) {
+  if (viewport.isMobile) await locator.tap();
+  else await locator.click();
+}
+
+async function assertNoHorizontalOverflow(page) {
+  const diagnosis = await page.evaluate(() => {
+    const client = document.documentElement.clientWidth;
+    const offenders = [...document.querySelectorAll("body *")].map(el => {
+      const r = el.getBoundingClientRect();
+      const ancestors = []; let containedByRail = false;
+      for (let p = el.parentElement, n = 0; p && n < 6; p = p.parentElement, n++) { const pr = p.getBoundingClientRect(); const overflowX=getComputedStyle(p).overflowX; if (overflowX === "auto" || overflowX === "scroll") containedByRail = true; ancestors.push({tag:p.tagName.toLowerCase(),id:p.id||"",className:typeof p.className === "string" ? p.className.slice(0,70) : "",left:Math.round(pr.left),right:Math.round(pr.right),width:Math.round(pr.width),overflowX,scrollWidth:p.scrollWidth}); }
+      return { tag: el.tagName.toLowerCase(), id: el.id || "", className: typeof el.className === "string" ? el.className.slice(0,100) : "", text: (el.innerText || el.textContent || "").trim().replace(/\s+/g," ").slice(0,100), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), scrollWidth: el.scrollWidth, containedByRail, ancestors };
+    }).filter(x => x.width && (x.left < -1 || x.right > client + 1)).slice(0,25);
+    return { client, scroll: document.documentElement.scrollWidth, offenders, uncontained: offenders.filter(x => !x.containedByRail) };
+  });
+  assert.ok(diagnosis.scroll <= diagnosis.client + 1, `horizontal overflow / DOM offenders: ${JSON.stringify(diagnosis)}`);
+}
+
+async function assertVisibleCopyLocale(page, locale, label) {
+  const copy = await page.evaluate(() => {
+    const clone = document.body.cloneNode(true);
+    clone.querySelectorAll("script,style,noscript,code,pre,input,textarea,select,[hidden],[aria-hidden='true']").forEach(el => el.remove());
+    return (clone.innerText || clone.textContent || "").replace(/\s+/g, " ").trim();
+  });
+  if (locale === "en") {
+    const hits = [...copy.matchAll(/[çğıöşüİ]/gi)].slice(0, 20).map(match => ({
+      character: match[0], context: copy.slice(Math.max(0, match.index - 65), Math.min(copy.length, match.index + 85))
+    }));
+    assert.deepEqual(hits, [], `${label}: Turkish UI characters remain in English copy`);
+  } else {
+    const untranslated = /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify)\b/i.exec(copy);
+    assert.equal(untranslated, null, `${label}: English UI phrase remains: ${untranslated?.[0]}`);
+  }
+  const expected = locale === "en" ? {
+    site: "𝕏 Share this site",
+    title: "Share · everyone uses their own account",
+    description: "The X button opens the composer for the X account currently signed in to this browser. The project account is mentioned as @lionmousse. For Medium, copy the draft and publish it from your own account.",
+    follow: "Follow @lionmousse"
+  } : {
+    site: "𝕏 Siteyi paylaş",
+    title: "Paylaş · herkes kendi hesabından",
+    description: "X butonu bu tarayıcıda açık olan X hesabının paylaşım ekranını açar. Metinde @lionmousse geçtiği için proje hesabı mention alır. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.",
+    follow: "@lionmousse hesabını takip et"
+  };
+  assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.site, `${label}: localized social share link`);
+  assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.title, `${label}: localized share panel heading`);
+  assert.equal((await page.locator("#rdSharePanel p").textContent()).trim(), expected.description, `${label}: localized share panel description`);
+  assert.equal((await page.locator('#rdSocialStrip a[href*="x.com/"]').textContent()).trim(), expected.follow, `${label}: localized X profile link`);
+}
+
+before(async () => {
+  const port = 43_000 + Math.floor(Math.random() * 1_000);
+  baseURL = `http://127.0.0.1:${port}`;
+  server = spawn(process.execPath, ["scripts/local-preview-server.mjs"], {
+    cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
+  });
+  server.stdout.setEncoding("utf8").on("data", (part) => { serverStdout += part; });
+  server.stderr.setEncoding("utf8").on("data", (part) => { serverStderr += part; });
+  await waitForServer(server, baseURL);
+  browser = await chromium.launch({ headless: true });
+});
+
+after(async () => {
+  await browser?.close();
+  if (server && server.exitCode === null) {
+    server.kill("SIGTERM");
+    await new Promise((resolve) => {
+      server.once("exit", resolve);
+      setTimeout(resolve, 2_000).unref();
+    });
+  }
+});
+
+test("main page boots from empty storage and translates in desktop and mobile", async () => {
+  for (const viewport of viewports) {
+    const { context, page } = await newPage(viewport);
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    try {
+      await page.goto(`${baseURL}/`);
+      await waitForAddonsReady(page);
+      await page.locator("h1").waitFor({ state: "visible" });
+      await page.locator("#rdTestnetToolkit").waitFor({ state: "visible" });
+      await page.locator("#rdTclkWorkbench").waitFor({ state: "visible" });
+      await page.locator("#rdProvFixSummary").waitFor({ state: "visible" });
+      const catalogAudit = await page.evaluate(() => window.RD_I18N.audit());
+      assert.ok(catalogAudit.catalogs >= 6, `all module catalogs registered: ${JSON.stringify(catalogAudit)}`);
+      assert.match(await page.locator("#heroDid").textContent(), /did:key:z6Mk/);
+      const communityNav = page.locator("#flopCommunityLink");
+      assert.equal(await communityNav.getAttribute("href"), "/flop");
+      if (viewport.width > 980) {
+        assert.equal(await communityNav.isVisible(), true, `${viewport.name} desktop navigation should be visible`);
+        await activate(communityNav, viewport);
+      } else {
+        assert.equal(await communityNav.isVisible(), false, `${viewport.name} compact navigation is intentionally hidden`);
+        const heroNav = page.locator('.hero-actions .ghost-link[href="/flop"]');
+        assert.equal(await heroNav.isVisible(), true, `${viewport.name} must expose a touchable FLOP navigation CTA`);
+        await activate(heroNav, viewport);
+      }
+      await page.waitForURL((url) => url.pathname === "/flop");
+      await page.locator("h1").waitFor({ state: "visible" });
+      await page.goBack();
+      await page.locator("#rdTestnetToolkit").waitFor({ state: "visible" });
+      assert.match(await page.evaluate(() => localStorage.getItem("reddragon-lang")), /^(tr|en)$/);
+      await page.locator('#rdLangSwitcher button[data-lang="en"]').click();
+      await page.locator(".hero-actions .ghost-link").filter({ hasText: "Open FLOP Observatory" }).waitFor({ state: "visible" });
+      await waitForAddonsReady(page);
+      assert.equal(await page.locator("html").getAttribute("lang"), "en");
+      assert.equal(await page.locator('.hero-actions .ghost-link[href="/flop"]').getAttribute("href"), "/flop");
+      assert.match(await page.locator("#brandSub").textContent(), /Community Observatory/);
+      assert.match(await page.locator("#rdDidProvenance .rd-prov-head h2").textContent(), /who built this tool/i);
+      assert.match(await page.locator("#rdDidProvenance .rd-prov-head p").textContent(), /Checks the RedDragon Technocore DID binding/i);
+      assert.equal(await page.locator("#rdDidProvenance .rd-prov-kv span").first().textContent(), "Ownership claim");
+      assert.equal(await page.locator("#rdDidProvenance .rd-prov-kv span").nth(3).textContent(), "Mailbox lane");
+      assert.match(await page.locator("#rdTestnetToolkit h2").textContent(), /testnet-ready/i);
+      assert.match(await page.locator("#rdTclkWorkbench .rd-tclk-head p").textContent(), /verifiable agent-to-agent/i);
+      await page.waitForFunction(() => /proof signals|core proof/i.test(document.querySelector("#rdProvFixSummary")?.textContent || ""));
+      assert.match(await page.locator("#rdProvFixSummary").textContent(), /proof signals|core proof/i);
+      assert.doesNotMatch(await page.locator("#rdTestnetToolkit .rd-testnet-head p").textContent(), /^FLOP'un güncel/);
+      assert.doesNotMatch(await page.locator("#rdDidProvenance").innerText(), /Live-verifies/);
+      await assertVisibleCopyLocale(page, "en", `${viewport.name}/home`);
+
+      assert.equal((await page.locator("#helloText").inputValue()).startsWith("Hello Technocore!"), true, "English default message must be localized");
+      await page.locator("#createBtn").click();
+      assert.equal((await page.locator("#toast").textContent()).trim(), "The password must be at least 12 characters.");
+      await page.locator('#rdLangSwitcher button[data-lang="tr"]').click();
+      await page.locator(".hero-actions .ghost-link").filter({ hasText: "FLOP Gözlemevini aç" }).waitFor({ state: "visible" });
+      await waitForAddonsReady(page);
+      assert.equal(await page.locator("html").getAttribute("lang"), "tr");
+      assert.match(await page.locator("#brandSub").textContent(), /Topluluk Gözlemevi/);
+      assert.match(await page.locator("#rdDidProvenance .rd-prov-head h2").textContent(), /bu aracı kim geliştirdi/i);
+      assert.equal(await page.locator("#rdDidProvenance .rd-prov-kv span").first().textContent(), "Sahiplik beyanı");
+      assert.equal(await page.locator("#rdDidProvenance .rd-prov-kv span").nth(3).textContent(), "Posta kutusu kanalı");
+      assert.match(await page.locator("#rdTestnetToolkit h2").textContent(), /testnet'e hazır mısın/i);
+      assert.match(await page.locator("#rdTclkWorkbench .rd-tclk-head p").textContent(), /doğrulanabilir ajanlar arası/i);
+      await page.waitForFunction(() => /kanıt|doğrulanamadı/i.test(document.querySelector("#rdProvFixSummary")?.textContent || ""));
+      assert.match(await page.locator("#rdProvFixSummary").textContent(), /kanıt|doğrulanamadı/i);
+      assert.doesNotMatch(await page.locator("#rdTestnetToolkit .rd-testnet-head p").textContent(), /Turns FLOP's current/);
+      assert.doesNotMatch(await page.locator("#rdDidProvenance").innerText(), /Live-verifies/);
+      await assertVisibleCopyLocale(page, "tr", `${viewport.name}/home`);
+      assert.equal((await page.locator("#helloText").inputValue()).startsWith("Merhaba Technocore!"), true, "Turkish default message must be localized");
+      await page.locator("#createBtn").click();
+      assert.equal((await page.locator("#toast").textContent()).trim(), "Parola en az 12 karakter olmalı.");
+      await assertNoHorizontalOverflow(page);
+      assert.deepEqual(errors, [], `${viewport.name} page errors`);
+    } finally { await context.close(); }
+  }
+});
+
+test("step 11 warning copy stays separated and localized at all supported widths", async () => {
+  const translations = {
+    tr: {
+      title: "İstenmeyen ileti değil, sürdürülebilir etkinlik",
+      description: "Ana workflow UTC :17 ve :47 dakikalarında, yedek workflow :02 ve :32 dakikalarında zamanlanır. GitHub zamanlanmış çalışmaları geciktirebilir. İmzalı gönderiler yalnızca etkinse ve kalıcı aralık sınırı izin veriyorsa yollanır (varsayılan 12 saat). Daha sık mesajların airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
+    },
+    en: {
+      title: "Sustainable activity, not spam",
+      description: "The primary workflow is scheduled at :17 and :47 UTC; the backup is scheduled at :02 and :32 UTC. GitHub may delay scheduled runs. Signed posts are sent only when enabled and the durable interval allows them (12 hours by default). There is no official evidence that more frequent messages improve airdrop eligibility."
+    }
+  };
+
+  for (const viewport of viewports) {
+    const { context, page } = await newPage(viewport, "tr");
+    try {
+      await page.goto(`${baseURL}/`);
+      await waitForAddonsReady(page);
+      const warning = page.locator('[data-step="11"] > .warning-box');
+      const heading = warning.locator("b");
+      const description = warning.locator("span");
+      await heading.waitFor({ state: "visible" });
+
+      for (const locale of ["tr", "en"]) {
+        if (await page.locator("html").getAttribute("lang") !== locale) {
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: "load" }),
+            page.locator('#rdLangSwitcher button[data-lang="' + locale + '"]').click()
+          ]);
+          await waitForAddonsReady(page);
+        }
+        const observed = await page.evaluate(() => ({
+          htmlLang: document.documentElement.lang,
+          storedLang: localStorage.getItem("reddragon-lang"),
+          title: document.querySelector('[data-step="11"] > .warning-box b')?.textContent?.trim() ?? null,
+          description: document.querySelector('[data-step="11"] > .warning-box span')?.textContent?.trim() ?? null
+        }));
+        console.log("step11 locale " + viewport.name + "/" + locale + ": " + JSON.stringify(observed));
+        assert.equal(observed.htmlLang, locale, viewport.name + "/" + locale + " html.lang");
+        assert.equal(observed.storedLang, locale, viewport.name + "/" + locale + " localStorage");
+        assert.equal(observed.title, translations[locale].title, viewport.name + "/" + locale + " title");
+        assert.equal(observed.description, translations[locale].description, viewport.name + "/" + locale + " description");
+        assert.equal((await page.locator(".ownerline b").textContent()).trim(), locale === "tr" ? "RedDragon FLOP Topluluk Aracı" : "RedDragon FLOP Community Tool");
+        assert.equal((await page.locator('[data-step="11"] .automation-grid > div:nth-child(2) h3').textContent()).trim(), locale === "tr" ? "Depo değişkenleri" : "Repository Variables");
+        assert.equal((await page.locator("#rdLiveNav").textContent()).trim(), locale === "tr" ? "Canlı" : "Live");
+        assert.equal((await page.locator("#rdLiveTitle").textContent()).trim(), locale === "tr" ? "Canlı Ajan Gözlemevi" : "Live Agent Observatory");
+        const localizedLiveCopy = (await page.locator("#rdLiveObservatory .eyebrow, #rdLiveTitle, #rdLiveTitle + p, .rd-live-public-note, .rd-live-metric, .rd-live-panel-head h3, .rd-live-footnote, .rd-live-empty, .rd-live-presence, .rd-live-presence + small").allTextContents()).join(" ").toLowerCase();
+        if (locale === "tr") assert.doesNotMatch(localizedLiveCopy, /\b(?:signed agent|active|idle|stale|heartbeat|public activity|agent view|public data|private room|buffer|polling)\b/i);
+        else assert.doesNotMatch(localizedLiveCopy, /[çğıöşüİ]/i);
+
+        const geometry = await warning.evaluate((box) => {
+          const title = box.querySelector("b");
+          const copy = box.querySelector("span");
+          const boxRect = box.getBoundingClientRect();
+          const titleRect = title.getBoundingClientRect();
+          const copyRect = copy.getBoundingClientRect();
+          return {
+            box: { left: boxRect.left, right: boxRect.right, top: boxRect.top, bottom: boxRect.bottom },
+            title: { left: titleRect.left, right: titleRect.right, top: titleRect.top, bottom: titleRect.bottom },
+            copy: { left: copyRect.left, right: copyRect.right, top: copyRect.top, bottom: copyRect.bottom },
+            titleDisplay: getComputedStyle(title).display,
+            copyDisplay: getComputedStyle(copy).display,
+            scrollWidth: box.scrollWidth,
+            clientWidth: box.clientWidth
+          };
+        });
+        assert.equal(geometry.titleDisplay, "block", `${viewport.name}/${locale} title uses its own row`);
+        assert.equal(geometry.copyDisplay, "block", `${viewport.name}/${locale} description uses its own row`);
+        assert.ok(geometry.title.bottom < geometry.copy.top, `${viewport.name}/${locale} title and description overlap: ${JSON.stringify(geometry)}`);
+        assert.ok(geometry.title.left >= geometry.box.left && geometry.title.right <= geometry.box.right, `${viewport.name}/${locale} title escapes warning box: ${JSON.stringify(geometry)}`);
+        assert.ok(geometry.copy.left >= geometry.box.left && geometry.copy.right <= geometry.box.right, `${viewport.name}/${locale} description escapes warning box: ${JSON.stringify(geometry)}`);
+        assert.ok(geometry.scrollWidth <= geometry.clientWidth, `${viewport.name}/${locale} warning box overflows: ${JSON.stringify(geometry)}`);
+      }
+      await assertNoHorizontalOverflow(page);
+    } finally { await context.close(); }
+  }
+});
+
+test("main page keeps local activity isolated by public DID on all viewports", async () => {
+  for (const viewport of viewports) {
+    const { context, page } = await newPage(viewport);
+    try {
+      await page.goto(`${baseURL}/`);
+      const did = page.locator("#rdLedgerDid");
+      await did.waitFor({ state: "visible" });
+      await did.fill(didRedDragon);
+      await page.locator("#rdFaucetAmount").fill("0.25");
+      await page.locator("#rdFaucetRef").fill("local-browser-check");
+      await activate(page.locator("#rdRecordFaucet"), viewport);
+      assert.match(await page.locator("#rdLedgerRows").textContent(), /local-browser-check/);
+      const redKey = `reddragon-flop-testnet-ledger:${didRedDragon}`;
+      const otherKey = `reddragon-flop-testnet-ledger:${didOther}`;
+      assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null")?.entries?.length, redKey), 1);
+      assert.equal(await page.evaluate((key) => localStorage.getItem(key), otherKey), null);
+
+      await did.fill(didOther);
+      assert.match(await page.locator("#rdLedgerRows").textContent(), /no records|henüz kayıt/i);
+      await page.locator("#rdInferenceAmount").fill("1.5");
+      await page.locator("#rdInferenceRef").fill("other-did-local-check");
+      await activate(page.locator("#rdRecordInference"), viewport);
+      assert.match(await page.locator("#rdLedgerRows").textContent(), /other-did-local-check/);
+      assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null")?.entries?.length, otherKey), 1);
+      const fieldTab = page.locator("#rdFieldRoomTabs .rd-field-room").nth(1);
+      const fieldRailOverflows = await page.locator("#rdFieldRoomTabs").evaluate(el => el.scrollWidth > el.clientWidth);
+      assert.equal(fieldRailOverflows, viewport.width < 650, "field room rail should scroll only when its natural content exceeds the viewport");
+      await activate(fieldTab, viewport);
+      assert.equal(await fieldTab.getAttribute("aria-selected"), "true", "touching a room tab selects that room");
+      const liveTab = page.locator("#rdLiveRoomTabs .rd-live-room-tab").nth(1);
+      const liveRailOverflows = await page.locator("#rdLiveRoomTabs").evaluate(el => el.scrollWidth > el.clientWidth);
+      assert.equal(liveRailOverflows, viewport.width < 650, "live room rail should scroll only when its natural content exceeds the viewport");
+      await activate(liveTab, viewport);
+      assert.equal(await liveTab.getAttribute("aria-selected"), "true", "touching a live room tab changes the selected feed");
+
+      await did.fill(didRedDragon);
+      assert.match(await page.locator("#rdLedgerRows").textContent(), /local-browser-check/);
+      assert.doesNotMatch(await page.locator("#rdLedgerRows").textContent(), /other-did-local-check/);
+      await assertNoHorizontalOverflow(page);
+    } finally { await context.close(); }
+  }
+});
+
+test("/flop Turkish and English copy, fail-closed status, and responsive layout", async () => {
+  for (const viewport of viewports) {
+    const { context, page } = await newPage(viewport);
+    try {
+      await page.goto(`${baseURL}/flop`);
+      await page.locator("#flop-live-status").waitFor({ state: "visible" });
+      await page.locator("#rdLiveTestnet [data-status]").waitFor({ state: "visible" });
+      const language = page.locator("#rdFlopLanguage");
+      await language.selectOption("tr");
+      assert.equal(await page.locator("html").getAttribute("lang"), "tr");
+      assert.equal(await page.locator("#live-title").textContent(), "Canlı FLOP durumu");
+      assert.equal(await page.locator(".lang-pick .sr-only").textContent(), "Arayüz dili");
+      assert.equal(await page.locator("footer > span:last-child").textContent(), "Topluluk çalışması · kaynak odaklı · resmî bağlantı iddiası yok");
+      await assertVisibleCopyLocale(page, "tr", `${viewport.name}/flop`);
+      await page.reload();
+      assert.equal(await language.inputValue(), "tr", "Turkish choice should survive reload");
+      await language.selectOption("en");
+      assert.equal(await page.locator("html").getAttribute("lang"), "en");
+      assert.equal(await page.locator("#live-title").textContent(), "Live FLOP status");
+      assert.equal(await page.locator(".lang-pick .sr-only").textContent(), "Language");
+      assert.equal(await page.locator("footer > span:last-child").textContent(), "Community-built · source-first · no affiliation claim");
+      await page.reload();
+      assert.equal(await language.inputValue(), "en", "English choice should survive reload");
+      assert.match(await page.locator("#rdLiveTestnet [data-status]").textContent(), /planned|unreleased/i);
+      assert.match(await page.locator("#rdLiveDevnet [data-detail]").textContent(), /administrator-assisted|administrator assistance/i);
+      assert.doesNotMatch(await page.locator("#rdLiveDevnet [data-detail]").textContent(), /public self-service unavailable/);
+      await assertVisibleCopyLocale(page, "en", `${viewport.name}/flop`);
+      await assertNoHorizontalOverflow(page);
+    } finally { await context.close(); }
+  }
+});
+
+test("language changes render all panels consistently across reloads and in-flight status refreshes", async () => {
+  const { context, page } = await newPage(viewports[2], "tr");
+  try {
+    await page.goto(`${baseURL}/`);
+    await page.locator('#rdLangSwitcher button[data-lang="en"]').click();
+    await page.locator('.hero-actions .ghost-link').filter({ hasText: "Open FLOP Observatory" }).waitFor({ state: "visible" });
+    assert.equal(await page.locator("html").getAttribute("lang"), "en");
+    assert.equal(await page.evaluate(() => localStorage.getItem("reddragon-lang")), "en");
+    await page.locator('#rdLangSwitcher button[data-lang="tr"]').click();
+    await page.locator('.hero-actions .ghost-link').filter({ hasText: "FLOP Gözlemevini Aç" }).waitFor({ state: "visible" });
+    assert.equal(await page.locator("html").getAttribute("lang"), "tr");
+    await page.reload();
+    assert.equal(await page.locator("html").getAttribute("lang"), "tr", "saved Turkish preference applies on first page boot");
+
+    let releaseStatus;
+    const statusGate = new Promise(resolve => { releaseStatus = resolve; });
+    await context.unroute("**/api/flop-status");
+    await context.route("**/api/flop-status", async route => {
+      await statusGate;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(statusFixture) });
+    });
+    await context.unroute("**/api/relay");
+    await context.route("**/api/relay", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "simulated failure" }) }));
+    await page.goto(`${baseURL}/flop`);
+    const language = page.locator("#rdFlopLanguage");
+    assert.equal(await page.locator("html").getAttribute("lang"), "tr");
+    await language.selectOption("en");
+    assert.equal(await page.evaluate(() => localStorage.getItem("reddragon-lang")), "en");
+    await expectCapacityMessage(page, "en", "The live source returned HTTP 503.");
+    releaseStatus();
+    await page.waitForFunction(() => document.querySelector("#rdLiveTestnet [data-status]")?.textContent.includes("Planned / unreleased"));
+    assert.equal(await page.locator("html").getAttribute("lang"), "en", "late live data uses current locale");
+    await language.selectOption("tr");
+    await expectCapacityMessage(page, "tr", "Canlı kaynak HTTP 503 yanıtı verdi.");
+    await page.reload();
+    assert.equal(await language.inputValue(), "tr", "the final choice persists across reload");
+    await expectCapacityMessage(page, "tr", "Canlı kaynak HTTP 503 yanıtı verdi.");
+  } finally { await context.close(); }
+});
+
+async function expectCapacityMessage(page, lang, phrase) {
+  await page.waitForFunction(({ lang, phrase }) => document.documentElement.lang === lang && document.getElementById("rdTcStatus")?.textContent.includes(phrase), { lang, phrase });
+  const text = await page.locator("#rdTcStatus").textContent();
+  assert.match(text, new RegExp(lang === "tr" ? "Canlı okuma aksadı" : "Live read degraded"));
+}
+
+
+test("/flop keeps source failures unverified and localized", async () => {
+  const { context, page } = await newPage(viewports[2]);
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await context.unroute("**/api/flop-status");
+  await context.route("**/api/flop-status", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({error:"simulated source failure"}) }));
+  try {
+    await page.goto(`${baseURL}/flop`);
+    await page.locator("#rdLiveTestnet [data-status]").waitFor({ state: "visible" });
+    await page.waitForFunction(() => document.querySelector("#rdLiveTestnet [data-status]")?.textContent.includes("Unverified"));
+    assert.equal(await page.locator("#rdLiveTestnet").getAttribute("data-state"), "bad");
+    await page.locator("#rdFlopLanguage").selectOption("tr");
+    await page.waitForFunction(() => document.documentElement.lang === "tr");
+    await page.waitForFunction(() => document.querySelector("#rdLiveTestnet [data-status]")?.textContent.includes("Doğrulanamadı"));
+    assert.doesNotMatch(await page.locator("#rdLiveTestnet [data-detail]").textContent(), /simulated source failure/);
+    assert.deepEqual(errors, [], "API failure localization must not throw a browser exception");
+  } finally { await context.close(); }
+});
+
+
+test("DID create, encrypted backup, restore, prompts and mocked signed flows work in both locales at every viewport", { timeout: 240000 }, async () => {
+  for (const viewport of viewports) for (const locale of ["en", "tr"]) {
+    const { context, page } = await newPage(viewport);
+    const errors = []; page.on("pageerror", error => errors.push(error.message));
+    try {
+      await page.goto(`${baseURL}/`);
+      await waitForAddonsReady(page);
+      await page.locator("#createBtn").waitFor({ state: "visible" });
+      const langButton = page.locator(`#rdLangSwitcher button[data-lang="${locale}"]`);
+      if (await page.locator("html").getAttribute("lang") !== locale) {
+        if (viewport.isMobile) await langButton.tap(); else await langButton.click();
+        await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+        await waitForAddonsReady(page);
+      }
+      const shortText = locale === "tr" ? "Parola en az 12 karakter olmalı." : "The password must be at least 12 characters.";
+      await activate(page.locator("#createBtn"), viewport);
+      assert.equal((await page.locator("#toast").textContent()).trim(), shortText);
+      await page.locator("#pass1").fill("ephemeral-browser-only-password");
+      await page.locator("#pass2").fill("ephemeral-browser-only-password");
+      await activate(page.locator("#createBtn"), viewport);
+      await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"), null, { timeout: 35000 });
+      const did = (await page.locator("#identityOut").textContent()).split("\n")[0].trim();
+      const downloadEvent = page.waitForEvent("download");
+      await activate(page.locator("#backupBtn"), viewport);
+      const backup = await downloadEvent;
+      assert.match(backup.suggestedFilename(), /reddragon-technocore-.*\.json/);
+      const backupPath = await backup.path();
+      const backupContents = await readFile(backupPath);
+      const encryptedBackup = JSON.parse(backupContents.toString("utf8"));
+      assert.equal(encryptedBackup.format, "reddragon-technocore-identity");
+      assert.equal(encryptedBackup.did, did);
+      assert.ok(encryptedBackup.ciphertextB64u && encryptedBackup.saltB64u && encryptedBackup.ivB64u);
+      let promptText = "";
+      const promptEvent = page.waitForEvent("dialog", { timeout: 8_000 }).catch(() => null);
+      const fileChooserEvent = page.waitForEvent("filechooser");
+      await activate(page.locator("label.filebtn").filter({ has: page.locator("#restoreInput") }), viewport);
+      const fileChooser = await fileChooserEvent;
+      await fileChooser.setFiles({ name: backup.suggestedFilename(), mimeType: "application/json", buffer: backupContents });
+      const restorePrompt = await promptEvent;
+      if (!restorePrompt) {
+        const evidence = await page.evaluate(() => ({ files: document.querySelector("#restoreInput")?.files?.length || 0, fileName: document.querySelector("#restoreInput")?.files?.[0]?.name || "", toast: document.querySelector("#toast")?.textContent || "" }));
+        assert.fail(`restore prompt did not open after choosing a valid encrypted backup: ${JSON.stringify(evidence)}`);
+      }
+      promptText = restorePrompt.message();
+      await restorePrompt.accept("ephemeral-browser-only-password");
+      const restoredText = locale === "tr" ? "Şifreli kimlik yedeği doğrulandı · DID + private key geri yüklendi" : "Encrypted identity backup verified · DID + private key restored";
+      await page.waitForFunction(expected => (document.querySelector("#toast")?.textContent || "").trim() === expected, restoredText, { timeout: 12_000 });
+      assert.equal((await page.locator("#toast").textContent()).trim(), restoredText, "encrypted backup should decrypt, restore, and show the localized completion message");
+      await page.waitForFunction(expected => (document.querySelector("#identityOut")?.textContent || "").startsWith(expected), did);
+      assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), did);
+      assert.equal(promptText, locale === "tr" ? "Yedek parolasını gir:" : "Enter the backup password:");
+      assert.equal((await page.locator("#toast").textContent()).trim(), restoredText);
+      await activate(page.locator("#helloBtn"), viewport);
+      await page.waitForFunction(expected => (document.querySelector("#helloOut")?.textContent || "").includes(expected), locale === "tr" ? "sıra" : "seq");
+      await page.locator("#rdVerifyRoom").fill("d-browser-missing-room");
+      await page.locator("#rdVerifyDid").fill(didRedDragon);
+      await activate(page.locator("#rdVerifyButton"), viewport);
+      await page.waitForFunction(() => (document.querySelector("#rdVerifyResult")?.textContent || "").includes("404"));
+      assert.match(await page.locator("#rdVerifyResult").textContent(), locale === "tr" ? /Dış sistemde kayıt bulunamadı/ : /external system returned no record/i);
+      assert.equal(await page.locator("#rdVerifyResult").getAttribute("data-state"), "bad", "external absence is not a local ownership pass");
+      assert.deepEqual(errors, [], `${locale}/${viewport.name} DID errors`);
+    } finally { await context.close(); }
+  }
+});
+
+test("candidate X share copies localized text without opening X or writing externally", { timeout: 90000 }, async () => {
+  for (const locale of ["en", "tr"]) {
+    const { context, page } = await newPage(viewports[0], locale);
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    try {
+      await page.goto(`${baseURL}/`);
+      await waitForAddonsReady(page);
+      await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+      await page.locator("#createBtn").waitFor({ state: "visible" });
+      await page.locator("#pass1").fill("ephemeral-browser-only-password");
+      await page.locator("#pass2").fill("ephemeral-browser-only-password");
+      await page.locator("#createBtn").click();
+      await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"), null, { timeout: 35000 });
+      const did = (await page.locator("#identityOut").textContent()).split("\n")[0].trim();
+
+      await page.locator("#clink").fill("https://example.test/red-dragon-contribution");
+      await page.locator("#ctitle").fill("Ephemeral browser audit contribution");
+      await page.locator("#contribBtn").click();
+      await page.waitForFunction(expected => (document.querySelector("#contribOut")?.textContent || "").includes(expected), locale === "tr" ? "İmzalı katkı" : "Signed contribution");
+      const shareButton = page.locator("#xShare");
+      assert.equal(await shareButton.isEnabled(), true, "a recorded contribution enables X sharing");
+      assert.equal((await shareButton.textContent()).trim(), locale === "tr" ? "X'te paylaş" : "Share on X");
+
+      const unexpectedPopups = [];
+      const pageCountBeforeShare = context.pages().length;
+      page.on("popup", popup => unexpectedPopups.push(popup));
+      await shareButton.click();
+      const expectedStart = locale === "tr"
+        ? "Technocore ajan kimliğimi oluşturdum ve faydalı bir katkı yayımladım"
+        : "Built my Technocore agent identity and published a useful contribution";
+      await page.waitForFunction(async expected => (await navigator.clipboard.readText()).includes(expected), expectedStart);
+      const text = await page.evaluate(() => navigator.clipboard.readText());
+      assert.ok(text.includes(expectedStart), `${locale} clipboard share has the correct localized intro`);
+      assert.ok(text.includes(did), `${locale} share contains the public DID`);
+      assert.ok(text.includes("https://example.test/red-dragon-contribution"), `${locale} share contains the contribution URL`);
+      assert.match(text, /#Technocore #FLOP/);
+      assert.deepEqual(unexpectedPopups, [], `${locale} clipboard share must not open a popup`);
+      assert.equal(context.pages().length, pageCountBeforeShare, `${locale} clipboard share must not create a new page`);
+      assert.deepEqual(errors, [], `${locale} X share should not throw a browser exception`);
+    } finally { await context.close(); }
+  }
+});

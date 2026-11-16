@@ -95,7 +95,7 @@ jobs:
           2f0316d3f32dda2d5fb76c461e13e76fbd05399c430e5dcbb56cb0672bc6d0a9  scripts/local-preview-http-smoke.mjs
           6c3346bae6f28b45a548c7c31ac5508e8e1894d0a5bf32e71ab6bec4686bf799  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          8214ef58acd328ce22b9c2331492e29ec9ab65780ecf61c1041ee444974a465b  scripts/ui-i18n.test.mjs
+          9c752d9f537902a03b37ebfb1ec1542354bee28429b277e3e629e8b5ea36fec3  scripts/ui-i18n.test.mjs
           SHA256
       - name: Install pinned Playwright package
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

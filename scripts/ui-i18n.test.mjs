@@ -18,7 +18,15 @@ const indexHtml = await readFile(new URL("../public/index.html", import.meta.url
 const flopHtml = await readFile(new URL("../public/flop.html", import.meta.url), "utf8");
 const browserWorkflow = await readFile(new URL("../.github/workflows/flop-site-browser-audit.yml", import.meta.url), "utf8");
 const packageManifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-const productionBrowserAudit = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const acceptanceAudit = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const productionSmokePath = new URL("./browser/production-smoke.spec.mjs", import.meta.url);
+let productionSmokeExists = true;
+try {
+  await readFile(productionSmokePath, "utf8");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+  productionSmokeExists = false;
+}
 const context = { window: {}, localStorage: { getItem: () => "en" }, navigator: { language: "en-US" } };
 vm.runInNewContext(source, context);
 const i18n = context.window.RD_I18N;
@@ -99,11 +107,11 @@ test("X proof button copies locally while explicit share intents stay localized"
   assert.match(enhancements, /replacement\.onclick = \(\) => copy\(proofShareText\(\), window\.RD_I18N\.t\("app\.xTextCopied"\)\)/);
   assert.match(enhancements, /\$\("#rdProofX"\)\.onclick = \(\) => xIntent\(proofShareText\(\)\)/);
   assert.match(enhancements, /xIntent\(proofShareText\(\)\)/);
-  assert.match(productionBrowserAudit, /navigator\.clipboard\.readText\(\)/);
-  assert.match(productionBrowserAudit, /unexpectedPopups, \[\]/);
-  assert.match(productionBrowserAudit, /context\.pages\(\)\.length, pageCountBeforeShare/);
-  assert.match(productionBrowserAudit, /#rdDidProvenance[\s\S]*#rdProvFixRefresh/);
-  assert.match(productionBrowserAudit, /Kanıtı yenile/);
+  assert.match(acceptanceAudit, /navigator\.clipboard\.readText\(\)/);
+  assert.match(acceptanceAudit, /unexpectedPopups, \[\]/);
+  assert.match(acceptanceAudit, /context\.pages\(\)\.length, pageCountBeforeShare/);
+  assert.match(acceptanceAudit, /#rdDidProvenance[\s\S]*#rdProvFixRefresh/);
+  assert.match(acceptanceAudit, /Kanıtı yenile/);
 });
 
 test("live-status API failure localizes both status panels without an undefined-language exception", () => {
@@ -151,7 +159,8 @@ test("browser workflow can run only on the QA branch with read-only repository p
   assert.match(packageManifest.scripts["test:browser"], /--test-concurrency=1/);
   assert.match(packageManifest.scripts["test:browser"], /site-acceptance\.spec\.mjs scripts\/browser\/flop-ui\.spec\.mjs/);
   assert.doesNotMatch(packageManifest.scripts["test:browser"], /production-smoke\.spec\.mjs/);
-  assert.match(packageManifest.scripts["test:browser:production"], /production-smoke\.spec\.mjs/);
+  assert.equal(packageManifest.scripts["test:browser:production"], undefined, "sandbox must not expose a production smoke npm command");
+  assert.equal(productionSmokeExists, false, "production-smoke.spec.mjs must not be copied into the sandbox");
   assert.match(browserWorkflow, /push:\s*\n\s+branches:\s*\n\s+- qa\/flop-e2e-9bbc626/);
   assert.match(browserWorkflow, /paths:\s*\n\s+- \.github\/workflows\/flop-site-browser-audit\.yml/);
   assert.match(browserWorkflow, /github\.event_name == 'push'[\s\S]*github\.event_name == 'workflow_dispatch'/);
@@ -159,6 +168,6 @@ test("browser workflow can run only on the QA branch with read-only repository p
   assert.match(browserWorkflow, /runs-on: ubuntu-24\.04/);
   assert.match(browserWorkflow, /permissions:\s*\n\s+contents: read/);
   assert.doesNotMatch(browserWorkflow, /vercel deploy|git push|gh pr merge/i);
-  assert.match(productionBrowserAudit, /Only test data; no persistent test identities or real relay writes/);
-  assert.match(productionBrowserAudit, /route\("\*\*\/api\/relay"/);
+  assert.match(acceptanceAudit, /Only test data; no persistent test identities or real relay writes/);
+  assert.match(acceptanceAudit, /route\("\*\*\/api\/relay"/);
 });

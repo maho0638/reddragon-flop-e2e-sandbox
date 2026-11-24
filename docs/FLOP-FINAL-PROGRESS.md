@@ -56,3 +56,13 @@ Updated: 2026-11-25 (Europe/Istanbul)
 - Vercel WAF regional rate-limit counters and usage pricing: https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting
 - Upstash Redis Free plan and quotas: https://upstash.com/pricing/redis
 - Upstash rate-limit command costs: https://upstash.com/docs/redis/sdks/ratelimit-ts/costs
+
+
+## Phase 3 follow-up — verified, no provider attached
+
+- Targeted existing relay regression tests on the clean main-based candidate: `node --test scripts/relay.test.mjs scripts/relay-security-audit.test.mjs` — 18/18 passed, 0 failed/skipped. Tests mock upstream; no live Technocore writes occurred.
+- Source inspection confirms `signedPost` verifies Ed25519 against the decoded DID key before forwarding. `kvGet` is read-only and fixed-host. The writable namespace allowlist blocks reserved namespaces, but `topic` and `profile` values can be overwritten by any caller who can reach the public relay; their writes have no signature/ownership proof. DID note fingerprint matching binds the key/value path but is not proof of private-key possession.
+- Vercel's official request-header documentation says Vercel overwrites `X-Forwarded-For` and identifies `x-real-ip` as equivalent; the current code prefers `x-real-ip`, then the final forwarded value. This is appropriate only when requests reach Vercel directly; a customer-controlled proxy in front needs a trusted-proxy design.
+- Official pricing checked 2026-11-25: Vercel WAF rate limiting has 1M included allowed requests on Hobby, then $0.50 per million (region dependent), one rule per Hobby project, IP/JA4 counting, fixed windows 10s–10min. It can provide shared edge IP limiting but cannot meet zero-budget assurance for unbounded overage or DID-keyed limits. Upstash Free currently lists 250 MB and 500K commands/month, then a card-backed upgrade switches resources to pay-as-you-go; no Upstash account/database/credentials were created.
+- Result: distributed quota remains **unresolved / medium risk**. No code claims cross-instance protection. A real shared store is not connected, and mock multi-instance tests alone would not prove a live distributed limit. The public `topic/profile` overwrite surface needs an ownership-compatible protocol decision before tightening it without breaking existing clients.
+- No rate-limit implementation or relay client change was made in this phase.

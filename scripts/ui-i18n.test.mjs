@@ -78,6 +78,11 @@ test("onboarding and proof-import UI copy uses shared translations in both langu
 
 test("TR/EN visible labels and dynamic live copy use the selected locale", () => {
   assert.match(languageStable, /text\("#copyDidSecret", en \? "Copy" : "Kopyala"\)/);
+  assert.match(flopStatus, /HALKA AÇIK TESTNET/);
+  assert.match(flopStatus, /p:not\(\.kicker\)/);
+  assert.match(flopStatus, /Resmî teknik tanım ↗/);
+  assert.match(capacity, /rdTcWindowLabel/);
+  assert.match(capacity, /rdTcUpdatedLabel/);
   const exactEntries = languageStable.match(/const exactEN = new Map\((\[[\s\S]*?\])\);/)?.[1];
   assert.ok(exactEntries, "dynamic English translation table must exist");
   const exactEN = vm.runInNewContext(`new Map(${exactEntries})`);
@@ -110,6 +115,8 @@ test("X proof button copies locally while explicit share intents stay localized"
   assert.match(enhancements, /replacement\.onclick = \(\) => copy\(proofShareText\(\), window\.RD_I18N\.t\("app\.xTextCopied"\)\)/);
   assert.match(enhancements, /\$\("#rdProofX"\)\.onclick = \(\) => xIntent\(proofShareText\(\)\)/);
   assert.match(enhancements, /xIntent\(proofShareText\(\)\)/);
+  assert.match(flopBrowserAudit, /#rdLangSwitcher button\[data-lang="tr"\][\s\S]*?#rdProvFixSummary.*waitFor\(\{ state: "visible" \}\)/);
+  assert.match(flopBrowserAudit, /#rdProvFixSummary[\s\S]{0,100}ancestor::article\[1\]/);
   assert.match(acceptanceAudit, /navigator\.clipboard\.readText\(\)/);
   assert.match(acceptanceAudit, /unexpectedPopups, \[\]/);
   assert.match(acceptanceAudit, /context\.pages\(\)\.length, pageCountBeforeShare/);

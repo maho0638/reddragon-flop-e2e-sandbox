@@ -1,0 +1,45 @@
+name: FLOP production read-only Chromium audit
+on:
+  push:
+    branches:
+      - qa/flop-e2e-9bbc626
+    paths:
+      - .github/workflows/production-readonly-audit.yml
+permissions:
+  contents: read
+concurrency:
+  group: flop-production-readonly-audit
+  cancel-in-progress: false
+jobs:
+  production-read-only-audit:
+    if: ${{ github.ref == 'refs/heads/qa/flop-e2e-9bbc626' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify read-only audit source hashes
+        run: |
+          sha256sum --check <<'SHA256'
+          d86b071f976b2d50dec1810f771e90e082515b843dfb991cc16a73197620245f  scripts/browser/production-readonly-audit.mjs
+          afa16bbc53916290630bd7224a5ff04274835832baa0f42b2d23b9b759cc808c  scripts/browser/csp-violation-gate.mjs
+          SHA256
+      - name: Install pinned Playwright runtime
+        run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1
+      - name: Install Chromium on temporary runner
+        run: npx playwright install --with-deps chromium
+      - name: Run production UI and responsive audit (relay writes intercepted)
+        run: node scripts/browser/production-readonly-audit.mjs
+        env:
+          SITE_ACCEPTANCE_ORIGIN: https://reddragon-technocore.vercel.app
+      - name: Fail on production CSP, browser, network or write signals
+        run: node scripts/browser/csp-violation-gate.mjs
+        env:
+          SITE_ACCEPTANCE_ORIGIN: https://reddragon-technocore.vercel.app

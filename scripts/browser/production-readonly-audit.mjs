@@ -16,6 +16,7 @@ const sizes = [
 ];
 const readOnlyRelayActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
 const checks = [];
+const checkFailures = [];
 const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], failedRequests: [], badResponses: [], blockedWrites: [] };
 
 function recordCheck(name, detail) {
@@ -29,7 +30,7 @@ function assertLocalized(result, route, locale) {
   assert.ok(result.scrollWidth <= result.clientWidth + 1, `${route}/${locale}: horizontal overflow ${JSON.stringify(result.overflow)}`);
   assert.deepEqual(result.invalidLinks, [], `${route}/${locale}: unsafe link targets`);
   if (locale === "en") {
-    assert.deepEqual(result.turkishCharacters, [], `${route}/${locale}: Turkish characters remain in English UI`);
+    assert.deepEqual(result.turkishCharacters, [], `${route}/${locale}: Turkish characters remain in English UI: ${JSON.stringify(result.turkishCharacterContexts)}`);
   } else {
     assert.equal(result.untranslatedEnglish, null, `${route}/${locale}: English phrase remains: ${result.untranslatedEnglish}`);
   }
@@ -54,7 +55,9 @@ async function inspect(page, route, locale, size, checkInternalLinks) {
     const invalidLinks = links.filter(link => !link.href || /^(javascript|data):/i.test(link.href) ||
       (link.target === "_blank" && !/(^|\s)(noopener|noreferrer)(\s|$)/i.test(link.rel)));
     const internalPaths = [...new Set(links.map(link => link.href).filter(href => href?.startsWith("/") && !href.startsWith("//")).map(href => href.split(/[?#]/)[0] || "/"))];
-    const trChars = locale === "en" ? [...new Set(copy.match(/[çğıöşüİ]/gi) || [])] : [];
+    const trMatches = locale === "en" ? [...copy.matchAll(/[çğıöşüİ]/gi)] : [];
+    const trChars = [...new Set(trMatches.map(match => match[0].toLocaleLowerCase("tr")))];
+    const trContexts = trMatches.map(match => copy.slice(Math.max(0, match.index - 50), Math.min(copy.length, match.index + match[0].length + 50)));
     const untranslatedEnglish = locale === "tr" ? /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify|official timeline and reward faq|yellow paper file history|windowed messages across the returned room page|last successful\/attempted refresh|the current source status is published|read-only rpc check|public testnet)\b/i.exec(copy)?.[0] || null : null;
     const warningTitle = title?.innerText.trim() || "";
     const warningText = warningCopy?.innerText.trim() || "";
@@ -68,7 +71,7 @@ async function inspect(page, route, locale, size, checkInternalLinks) {
     const controls = [...document.querySelectorAll("button, a[href], select, input:not([type=hidden]), textarea")].filter(el => el.getClientRects().length).length;
     return {
       route, locale, lang: root.lang, innerWidth, clientWidth: root.clientWidth, scrollWidth: root.scrollWidth,
-      turkishCharacters: trChars, untranslatedEnglish, invalidLinks, internalPaths, controls, loadedCss, loadedImages,
+      turkishCharacters: trChars, turkishCharacterContexts: trContexts, untranslatedEnglish, invalidLinks, internalPaths, controls, loadedCss, loadedImages,
       warning: { box: rect(warning), title: rect(title), copy: rect(warningCopy), titleText: warningTitle, copyText: warningText },
       liveTitle, sourceTitle,
       liveTestnet: {
@@ -160,7 +163,8 @@ try {
     for (const locale of ["en", "tr"]) {
       await page.locator(`#rdLangSwitcher button[data-lang='${locale}']`).click();
       await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
-      await inspect(page, "home", locale, size, size.width === 1440 && locale === "en");
+      try { await inspect(page, "home", locale, size, size.width === 1440 && locale === "en"); }
+      catch (error) { const item = { route: "home", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
     }
   }
 
@@ -180,7 +184,8 @@ try {
     for (const locale of ["tr", "en"]) {
       await page.locator("#rdFlopLanguage").selectOption(locale);
       await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
-      await inspect(page, "flop", locale, size, size.width === 1440 && locale === "tr");
+      try { await inspect(page, "flop", locale, size, size.width === 1440 && locale === "tr"); }
+      catch (error) { const item = { route: "flop", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
     }
   }
   await page.locator("#rdFlopLanguage").selectOption("en");
@@ -202,8 +207,9 @@ try {
   assert.deepEqual(firstPartyFailures, [], "first-party failed network requests");
   assert.deepEqual(firstPartyBadResponses, [], "first-party HTTP errors");
   assert.deepEqual(signals.blockedWrites, [], "the production UI attempted a relay write during the read-only audit");
-  console.log(`[PRODUCTION-AUDIT] SUMMARY ${JSON.stringify({ checks: checks.length, viewportWidths: sizes.map(item => item.width), failures: 0, signals })}`);
+  console.log(`[PRODUCTION-AUDIT] SUMMARY ${JSON.stringify({ checks: checks.length, checkFailures, viewportWidths: sizes.map(item => item.width), signals })}`);
   assert.equal(checks.length, 16, "all four viewport widths, two routes and two languages must be inspected");
+  assert.deepEqual(checkFailures, [], "production layout, language and source checks");
 } catch (error) {
   console.error(`[PRODUCTION-AUDIT] FAILURE ${JSON.stringify({ message: error.message, checks: checks.length, signals })}`);
   throw error;

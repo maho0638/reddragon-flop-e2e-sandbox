@@ -102,7 +102,7 @@ async function assertNoHorizontalOverflow(page) {
   assert.ok(diagnosis.scroll <= diagnosis.client + 1, `horizontal overflow / DOM offenders: ${JSON.stringify(diagnosis)}`);
 }
 
-async function assertVisibleCopyLocale(page, locale, label) {
+async function assertVisibleCopyLocale(page, locale, label, { home = false } = {}) {
   const copy = await page.evaluate(() => {
     const clone = document.body.cloneNode(true);
     clone.querySelectorAll("script,style,noscript,code,pre,input,textarea,select,[hidden],[aria-hidden='true']").forEach(el => el.remove());
@@ -117,6 +117,7 @@ async function assertVisibleCopyLocale(page, locale, label) {
     const untranslated = /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify)\b/i.exec(copy);
     assert.equal(untranslated, null, `${label}: English UI phrase remains: ${untranslated?.[0]}`);
   }
+  if (!home) return;
   const expected = locale === "en" ? {
     site: "𝕏 Share this site",
     title: "Share · everyone uses their own account",
@@ -204,7 +205,7 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.match(await page.locator("#rdProvFixSummary").textContent(), /proof signals|core proof/i);
       assert.doesNotMatch(await page.locator("#rdTestnetToolkit .rd-testnet-head p").textContent(), /^FLOP'un güncel/);
       assert.doesNotMatch(await page.locator("#rdDidProvenance").innerText(), /Live-verifies/);
-      await assertVisibleCopyLocale(page, "en", `${viewport.name}/home`);
+      await assertVisibleCopyLocale(page, "en", `${viewport.name}/home`, { home: true });
 
       assert.equal((await page.locator("#helloText").inputValue()).startsWith("Hello Technocore!"), true, "English default message must be localized");
       await page.locator("#createBtn").click();
@@ -223,7 +224,7 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.match(await page.locator("#rdProvFixSummary").textContent(), /kanıt|doğrulanamadı/i);
       assert.doesNotMatch(await page.locator("#rdTestnetToolkit .rd-testnet-head p").textContent(), /Turns FLOP's current/);
       assert.doesNotMatch(await page.locator("#rdDidProvenance").innerText(), /Live-verifies/);
-      await assertVisibleCopyLocale(page, "tr", `${viewport.name}/home`);
+      await assertVisibleCopyLocale(page, "tr", `${viewport.name}/home`, { home: true });
       assert.equal((await page.locator("#helloText").inputValue()).startsWith("Merhaba Technocore!"), true, "Turkish default message must be localized");
       await page.locator("#createBtn").click();
       assert.equal((await page.locator("#toast").textContent()).trim(), "Parola en az 12 karakter olmalı.");

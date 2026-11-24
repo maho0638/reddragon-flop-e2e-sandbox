@@ -362,4 +362,5 @@ window.addEventListener("load", () => {
   upgradeFooter();
   friendlyCapacityErrors();
   checkRelay();
+  window.dispatchEvent(new Event("rd:dynamicuiready"));
 });

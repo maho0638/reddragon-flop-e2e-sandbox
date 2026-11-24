@@ -19,6 +19,7 @@ const flopHtml = await readFile(new URL("../public/flop.html", import.meta.url),
 const browserWorkflow = await readFile(new URL("../.github/workflows/flop-site-browser-audit.yml", import.meta.url), "utf8");
 const packageManifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const acceptanceAudit = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const flopBrowserAudit = await readFile(new URL("./browser/flop-ui.spec.mjs", import.meta.url), "utf8");
 const productionSmokePath = new URL("./browser/production-smoke.spec.mjs", import.meta.url);
 let productionSmokeExists = true;
 try {
@@ -153,6 +154,16 @@ test("both pages select and render the saved language before add-on loading", ()
   assert.match(languageStable, /window\.addEventListener\("rd:languagechange"/);
   assert.match(config, /window\.dispatchEvent\(new Event\("rd:addonsready"\)\)/);
   assert.match(languageStable, /window\.addEventListener\("rd:addonsready"/);
+});
+
+test("browser locale assertions are page-scoped and restore the actual encrypted JSON download", () => {
+  assert.match(flopBrowserAudit, /async function assertVisibleCopyLocale\\(page, locale, label, \\{ home = false \\} = \\{\\}\\)/);
+  assert.match(flopBrowserAudit, /if \\(!home\\) return;/);
+  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\\(page, "en", `\\$\\{viewport\\.name\\}\\/home`, \\{ home: true \\}\\)/);
+  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\\(page, "tr", `\\$\\{viewport\\.name\\}\\/home`, \\{ home: true \\}\\)/);
+  assert.match(acceptanceAudit, /assert\\.match\\(backupName, \\\/\\\\\\.json\\$\\/i/);
+  assert.match(acceptanceAudit, /chooser\\.setFiles\\(\\{ name: backupName, mimeType: "application\\/json", buffer: backupContents \\}\\)/);
+  assert.match(acceptanceAudit, /backup\\.suggestedFilename\\(\\), "ephemeral-ui-audit-only-password"/);
 });
 
 test("browser workflow can run only on the QA branch with read-only repository permissions", () => {

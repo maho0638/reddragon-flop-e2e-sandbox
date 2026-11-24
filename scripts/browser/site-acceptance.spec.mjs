@@ -137,12 +137,14 @@ async function acceptDialogDuring(page, action, promptText) {
   const dialogHandled = page.waitForEvent("dialog", { timeout: 15000 }).then(dialog => dialog.accept(promptText));
   await Promise.all([action(), dialogHandled]);
 }
-async function restoreDownloadedBackup(page, backupPath, password) {
+async function restoreDownloadedBackup(page, backupPath, backupName, password) {
+  assert.match(backupName, /\\.json$/i, "encrypted identity backup must retain its .json filename");
+  const backupContents = await readFile(backupPath);
   const chooserEvent = page.waitForEvent("filechooser", { timeout: 30_000 });
   await page.locator("label.filebtn").filter({ has: page.locator("#restoreInput") }).click();
   const chooser = await chooserEvent;
   const promptEvent = page.waitForEvent("dialog", { timeout: 30_000 });
-  await chooser.setFiles(backupPath);
+  await chooser.setFiles({ name: backupName, mimeType: "application/json", buffer: backupContents });
   const dialog = await promptEvent;
   assert.equal(dialog.type, "prompt", "restoring an encrypted backup must request its password");
   const promptMessage = dialog.message();
@@ -275,7 +277,7 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.equal(backupJson.kdf, "PBKDF2-SHA256-310000");
     assert.equal(backupJson.did, generatedDid);
     assert.ok(backupJson.ciphertextB64u && backupJson.saltB64u && backupJson.ivB64u, "downloaded backup must contain encrypted key material");
-    const restorePrompt = await restoreDownloadedBackup(page, backupPath, "ephemeral-ui-audit-only-password");
+    const restorePrompt = await restoreDownloadedBackup(page, backupPath, backup.suggestedFilename(), "ephemeral-ui-audit-only-password");
     assert.equal(restorePrompt, "Enter the backup password:");
     await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID");testedActions++;

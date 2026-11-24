@@ -146,7 +146,7 @@ async function restoreDownloadedBackup(page, backupPath, backupName, password) {
   const promptEvent = page.waitForEvent("dialog", { timeout: 30_000 });
   await chooser.setFiles({ name: backupName, mimeType: "application/json", buffer: backupContents });
   const dialog = await promptEvent;
-  assert.equal(dialog.type, "prompt", "restoring an encrypted backup must request its password");
+  assert.equal(dialog.type(), "prompt", "restoring an encrypted backup must request its password");
   const promptMessage = dialog.message();
   await dialog.accept(password);
   return promptMessage;

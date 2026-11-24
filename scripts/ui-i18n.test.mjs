@@ -169,6 +169,7 @@ test("browser locale assertions are page-scoped and restore the actual encrypted
   assert.match(flopBrowserAudit, /assertVisibleCopyLocale\(page, "tr", `\$\{viewport\.name\}\/home`, \{ home: true \}\)/);
   assert.match(acceptanceAudit, /assert\.match\(backupName, \/\\\.json\$\/i/);
   assert.match(acceptanceAudit, /chooser\.setFiles\(\{ name: backupName, mimeType: "application\/json", buffer: backupContents \}\)/);
+  assert.match(acceptanceAudit, /dialog\.type\(\)/);
   assert.match(acceptanceAudit, /backup\.suggestedFilename\(\), "ephemeral-ui-audit-only-password"/);
 });
 

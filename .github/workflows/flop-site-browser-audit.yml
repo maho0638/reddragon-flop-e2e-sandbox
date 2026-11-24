@@ -35,7 +35,7 @@ jobs:
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
           echo "SOURCE_FIX_COMMIT=cf70bfc463d6a7b44e273c92ec80602f92d9248b"
-          echo "SANDBOX_FIX_PARENT=fb94a3c51b012999bb5e5479d017b81a852345e6"
+          echo "SANDBOX_FIX_PARENT=a1a2af1ab255fc3daab1bb5b32ee33e62e51f6c3"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
@@ -91,12 +91,12 @@ jobs:
           b51d4afa9b2530a4515b3366fe1d7bf1c7bb832ec0fef1c209adca333c0db609  public/testnet-toolkit.js
           d671bc6ede6296f3c4f208857872c4fdfbaf1b134ac5239abd1513d0a2d8aef9  public/ui-i18n.js
           22acc2cba4679fe7116cfbcdde44179ecc9561be62416102b3996771bc7fb7f3  scripts/browser/flop-ui.spec.mjs
-          172594803fd2c2b74858e03b5c74638ef3e8a9775264e1090a1a881bd44b1100  scripts/browser/site-acceptance.spec.mjs
+          f63cdc4600b5d6aaaae65d1b4fed4ea0ad5958da3468a708c05e24f93c3a6f30  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
           2f0316d3f32dda2d5fb76c461e13e76fbd05399c430e5dcbb56cb0672bc6d0a9  scripts/local-preview-http-smoke.mjs
           6c3346bae6f28b45a548c7c31ac5508e8e1894d0a5bf32e71ab6bec4686bf799  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          11fa0bb2c44b484bb5f1722da6bb62378cdc80ec2d2b4a7f32af6e6f08b36de7  scripts/ui-i18n.test.mjs
+          484c646792c2ebefd357a0f716527306fc0a19cf1755f1ef17177a7001cff47e  scripts/ui-i18n.test.mjs
           SHA256
       - name: Install pinned Playwright package
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

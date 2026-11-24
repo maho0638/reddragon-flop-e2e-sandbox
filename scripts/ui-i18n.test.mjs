@@ -17,6 +17,7 @@ const languageBootstrap = await readFile(new URL("../public/language-bootstrap.j
 const indexHtml = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const flopHtml = await readFile(new URL("../public/flop.html", import.meta.url), "utf8");
 const browserWorkflow = await readFile(new URL("../.github/workflows/flop-site-browser-audit.yml", import.meta.url), "utf8");
+const localBrowserRunner = await readFile(new URL("./run-local-browser-acceptance.mjs", import.meta.url), "utf8");
 const packageManifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const acceptanceAudit = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
 const flopBrowserAudit = await readFile(new URL("./browser/flop-ui.spec.mjs", import.meta.url), "utf8");
@@ -174,8 +175,12 @@ test("browser locale assertions are page-scoped and restore the actual encrypted
 });
 
 test("browser workflow can run only on the QA branch with read-only repository permissions", () => {
-  assert.match(packageManifest.scripts["test:browser"], /--test-concurrency=1/);
-  assert.match(packageManifest.scripts["test:browser"], /site-acceptance\.spec\.mjs scripts\/browser\/flop-ui\.spec\.mjs/);
+  assert.equal(packageManifest.scripts["test:browser"], "node scripts/run-local-browser-acceptance.mjs");
+  assert.match(localBrowserRunner, /--test-concurrency=1/);
+  assert.match(localBrowserRunner, /scripts\/browser\/site-acceptance\.spec\.mjs/);
+  assert.match(localBrowserRunner, /scripts\/browser\/flop-ui\.spec\.mjs/);
+  assert.match(localBrowserRunner, /SITE_ACCEPTANCE_ORIGIN: origin/);
+  assert.doesNotMatch(localBrowserRunner, /reddragon-technocore\.vercel\.app/);
   assert.doesNotMatch(packageManifest.scripts["test:browser"], /production-smoke\.spec\.mjs/);
   assert.equal(packageManifest.scripts["test:browser:production"], undefined, "sandbox must not expose a production smoke npm command");
   assert.equal(productionSmokeExists, false, "production-smoke.spec.mjs must not be copied into the sandbox");

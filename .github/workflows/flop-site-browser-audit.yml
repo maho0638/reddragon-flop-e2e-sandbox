@@ -34,19 +34,19 @@ jobs:
           package-manager-cache: false
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
-          echo "SOURCE_FIX_COMMIT=cf70bfc463d6a7b44e273c92ec80602f92d9248b"
-          echo "SANDBOX_FIX_PARENT=9014b27b55291f9e27cfe5376f4db54905d7b21e"
+          echo "PRODUCTION_BASE=c56ba4ee45aafcf934acd369f7832656bf6da2ef"
+          echo "SANDBOX_FIX_PARENT=1f0a678aa68e42f2c20a2498abf1c33b431c47bb"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
-          ad41cc06420fb4330038c25ea41dfbacfbb8e698a177081c8f3a7576092efffa  api/flop-status.js
+          a67e6a56e35aa5a1946843d74920dae46c86826631b17110a57a53b50ee6828c  api/flop-status.js
           9a63745452c91f7098d31d5652c3d304aa3ba6c77bb0ca97b5d8945dcbd6b52b  api/relay.js
-          6f0fd0ad865f64f210fbfbebd3478fefa659c91755a40f4df8749f13e44c7b54  package.json
+          8a9b52b3ba5e959f37091b06c288e932e8fca9ac3046e20e7fa946931d666dfb  package.json
           cd3b30609ec12e468807f805c2666b0e2eb9d312b098b40ef4fb41a67e4c0332  public/404.html
           9945c501cc2439e13bd761796548fb8ab59becf76b5a67cb97dbdc991f258975  public/activity-proof.js
           9d08c13844b613284666a437c728e1bdda7101d5993ac63bcd803638eb3677e8  public/agent-field.css
           84f37a6630405cc0254d939ca3dad3ee2b18fd6ef867225136d7140fc36a6376  public/agent-field.js
-          5315195758a40b7d826faa7f0d6ec28a7f55566d58bf1f7c6350fc9a95905b18  public/app.js
+          fe9850990d4487f331e04b7323d5b3a62eb82fa05b3ac47e9782c9189001c14c  public/app.js
           a0fd7d3cb01cd349de100ce1d8bb056026d36471d68f391c35374b3eda7de43a  public/assets/reddragon.jpg
           367095779728296c9f9adabcc79d7eb0d005b5cc096df3eacf5695c54c37c608  public/community-positioning.js
           01457a6db1388beb2a016b0746ef945ecfea73ff1248c733711706e16381aca2  public/config.js
@@ -54,16 +54,16 @@ jobs:
           57c25d847c5535bfc0b3b413e1c99a877a60edf524c94a2e0880b8e60bcff14b  public/did-provenance.css
           ee359fea7b23d686af5303eb88f09a1712c34d3fffcb72761f972bea4ee24b70  public/did-provenance.js
           c1c76c95a213325242ef2ff76caf0682e45512ab9ad2bcd79d076b4300ea91f8  public/enhancements.css
-          8e2daefaa3466cf7a162dd85c052b74db53d5c09fd4125f7a05602840c213eee  public/enhancements.js
-          e03ef2dd2b65d92a64f0aba8e32437a1aaf621b80bf2fc49826224a6fb970671  public/final-fixes.js
+          32f588a0187989809234d8a6229537549cb97814eb39ca2fb8693b320ad39f98  public/enhancements.js
+          a145c0c5925601a35643bd8c0f09a8e1dcd8349bf550cabd17518e20b5b073fd  public/final-fixes.js
           307099f92e0f5497e78a542f457c44afa9bb9310d5780b6c6744b571ccd6d531  public/flop-did-utils.js
-          335667ba89c20eb897a2f57bc02fb7e627aea2fdfb22e438dbdd7b640aedc591  public/flop-live-status.js
+          91b53c0a10110c2404654dc26e28a9cf2ee443b9b7fffe06585c226a3cc945a2  public/flop-live-status.js
           afb147a61c1b6bb64eaf2be6d20da883b1db6e708723e7b906edd84e74858828  public/flop-responsive-fixes.css
-          c7facc8dba5d919ddfd3a3c1d54faa2643f467b8617010d1685603233a5dfa89  public/flop-source-status.json
-          8bf24dd153387aecb35f82abada4955828b1ef80f9ce6454a29a1c5609b55f69  public/flop-spec-refresh.js
+          acf724bea3d788c617d8613a6e99a70c8868d575f333c7b5d795fe4e3f53b033  public/flop-source-status.json
+          edbd04f2f9feb69fc7e397700d9f43e5a6d35784fcc7fa07d60693c0384da5c2  public/flop-spec-refresh.js
           69fb10422e5548154a5772bcb32ac0ce11110f22a0f4b9a2d0e3b9e55ff8415d  public/flop.css
-          a400e1d85145643d747fa4e88c2759c4e71146c9c267c412dc3007c59cadf18e  public/flop.html
-          dd13136723d04c8554b5c23b280e13fa1e3a5be7c49472e9db5d0c4be942f2c6  public/index.html
+          4b6782df515aa3407055a7a4927deffff397f80de03e0472e33225c85010cfe4  public/flop.html
+          aaaecb3e414d1356c6759b0e714a70e65a1d083c5ddd147d8aad790006ccfe3f  public/index.html
           c93940db073182b505b8cfec841690f3a58948ee338ae316d3df916807769780  public/language-bootstrap.js
           d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
           1f6d6f76d5228cb4dd2b1c3b5ff004565fc10e77c124a857c21345201d5b7598  public/language-safe.js
@@ -72,7 +72,7 @@ jobs:
           cb3dd30f5dd7b2a6054ec2260018d2e43daece5ff7de428b2d70cacfe2f27dac  public/language.js
           a4db72c11f8ee57348af27d7e391eb013d5564d21ef1c3683a4d784d6941db67  public/live-observatory.css
           e95b0c153ca2f26117585c64bb3d00d493d5fddf570494ec67d3f85bd6b101c0  public/live-observatory.js
-          ee1b237b7c24094e11304bc97b9212ff1ffbb7bd410c4678049c11edd3214dc3  public/llms.txt
+          03e23e85f10a72f09a026311c3173ef24e5a16b77493b4efd4fdd1beb15a3b78  public/llms.txt
           ab0b0d28210f47bef2549373cd7b507959e367b55a0e36d54bfc7eafe84e1574  public/patches.js
           1f18fdc1e8e23f21d9930a77ccb1faddaf3cef6ec386366923aa5e1d9ba0a282  public/progress-scope-fix.js
           7d34a8eea2591f4305ddf1f66a8a4372fac37d50eabe5d7eb688b9c9b6b6eb1a  public/proof-import.js
@@ -88,15 +88,16 @@ jobs:
           aceff90aef6ee44e372831e958309e065f5754f909159ca7b1cfe1add6fe1293  public/tclk-workbench.js
           6a4f59e867156df58efd64c6be227e12ea003087fc1d68c548784b7eb901a4c6  public/technocore-capacity.js
           b969a17949b3d5a6cbe9c74d0b8a71700e91d253b8c1951fbede952c06304487  public/testnet-toolkit.css
-          b51d4afa9b2530a4515b3366fe1d7bf1c7bb832ec0fef1c209adca333c0db609  public/testnet-toolkit.js
-          d671bc6ede6296f3c4f208857872c4fdfbaf1b134ac5239abd1513d0a2d8aef9  public/ui-i18n.js
-          22acc2cba4679fe7116cfbcdde44179ecc9561be62416102b3996771bc7fb7f3  scripts/browser/flop-ui.spec.mjs
-          15735d7c6b221e06f355d897be394d7c3f44fcd64e1df8e29102c25f1c75c823  scripts/browser/site-acceptance.spec.mjs
+          24b123cf155995b6cff5fbf643ba98184f8c9d3cb3a99132ed1df64a8b507b91  public/testnet-toolkit.js
+          70bf1892c1136fe4f35a01c70d4a516600040e7d2b315423975e8345f87ac0a6  public/ui-i18n.js
+          2cc22aae8267ff0e9080f3898cc28bb57a2b114a87060ef6feb4a8d4c12efbba  scripts/browser/flop-ui.spec.mjs
+          29a1a23ebc0e5f3974dd818d806c3c5d3512d871c7b38997c19b4d62c0d92d63  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
-          2f0316d3f32dda2d5fb76c461e13e76fbd05399c430e5dcbb56cb0672bc6d0a9  scripts/local-preview-http-smoke.mjs
-          6c3346bae6f28b45a548c7c31ac5508e8e1894d0a5bf32e71ab6bec4686bf799  scripts/local-preview-server.mjs
+          f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
+          56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          484c646792c2ebefd357a0f716527306fc0a19cf1755f1ef17177a7001cff47e  scripts/ui-i18n.test.mjs
+          c0292cf832e58eab7212ae2f07426f750a46d55da025c5ee6f7b7ab6686b6b6c  scripts/ui-i18n.test.mjs
+          fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
           SHA256
       - name: Install pinned Playwright package
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

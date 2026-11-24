@@ -131,47 +131,35 @@ function addTopLinks() {
 function addHeroSocial() {
   const host = $(".hero-actions");
   if (!host || $("#rdSocialStrip")) return;
-  const en = window.RD_I18N.language() === "en";
   const strip = document.createElement("div");
   strip.id = "rdSocialStrip";
   strip.className = "rd-social-strip";
   strip.innerHTML = `
-    <button type="button" id="rdShareSiteX"></button>
+    <button type="button" id="rdShareSiteX">𝕏 Siteden paylaş</button>
     <a href="${REPO_URL}" target="_blank" rel="noreferrer">★ GitHub</a>
     <a href="${REPO_URL}/fork" target="_blank" rel="noreferrer">⑂ Fork</a>
     <a href="${MEDIUM_URL}" target="_blank" rel="noreferrer">M Medium</a>
-    <a href="https://x.com/${X_USER}" target="_blank" rel="noreferrer"></a>`;
+    <a href="https://x.com/${X_USER}" target="_blank" rel="noreferrer">Takip et ${X_HANDLE}</a>`;
   host.after(strip);
-  $("#rdShareSiteX").textContent = en ? "𝕏 Share this site" : "𝕏 Siteyi paylaş";
-  strip.querySelector('a[href*="x.com/"]').textContent = en ? `Follow ${X_HANDLE}` : `${X_HANDLE} hesabını takip et`;
   $("#rdShareSiteX").onclick = () => xIntent(siteShareText());
 }
 
 function upgradeProofShare() {
   const card = document.querySelector('[data-step="10"]');
   if (!card || $("#rdSharePanel")) return;
-  const en = window.RD_I18N.language() === "en";
   const panel = document.createElement("div");
   panel.id = "rdSharePanel";
   panel.className = "rd-share-panel";
   panel.innerHTML = `
-    <h3></h3>
-    <p></p>
+    <h3>Paylaş · herkes kendi hesabından</h3>
+    <p>X butonu, o tarayıcıda giriş yapılmış X hesabının paylaşım ekranını açar. Metinde ${X_HANDLE} geçtiği için proje hesabı mention alır. Medium için yazıyı kopyalayıp kendi hesabında yayınlayabilirsin.</p>
     <div class="rd-share-grid">
-      <button type="button" id="rdProofX"></button>
-      <button type="button" id="rdThreadCopy"></button>
-      <button type="button" id="rdMediumCopy"></button>
-      <a href="${MEDIUM_WRITE_URL}" target="_blank" rel="noreferrer"></a>
+      <button type="button" id="rdProofX">𝕏 DID + proof paylaş</button>
+      <button type="button" id="rdThreadCopy">3 tweetlik diziyi kopyala</button>
+      <button type="button" id="rdMediumCopy">Medium yazısını kopyala</button>
+      <a href="${MEDIUM_WRITE_URL}" target="_blank" rel="noreferrer">Medium’da yeni yazı aç</a>
     </div>`;
   card.appendChild(panel);
-  panel.querySelector("h3").textContent = en ? "Share · everyone uses their own account" : "Paylaş · herkes kendi hesabından";
-  panel.querySelector("p").textContent = en
-    ? `The X button opens the composer for the X account currently signed in to this browser. The project account is mentioned as ${X_HANDLE}. For Medium, copy the draft and publish it from your own account.`
-    : `X butonu bu tarayıcıda açık olan X hesabının paylaşım ekranını açar. Metinde ${X_HANDLE} geçtiği için proje hesabı mention alır. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.`;
-  $("#rdProofX").textContent = en ? "𝕏 Share DID + proof" : "𝕏 DID + kanıt paylaş";
-  $("#rdThreadCopy").textContent = en ? "Copy 3-post thread" : "3 gönderilik diziyi kopyala";
-  $("#rdMediumCopy").textContent = en ? "Copy Medium draft" : "Medium taslağını kopyala";
-  panel.querySelector(".rd-share-grid a").textContent = en ? "Open a new Medium story" : "Medium'da yeni yazı aç";
   $("#rdProofX").onclick = () => xIntent(proofShareText());
   $("#rdThreadCopy").onclick = () => copy(threadText(), "3 tweetlik dizi kopyalandı");
   $("#rdMediumCopy").onclick = () => copy(mediumDraft(), "Medium taslağı kopyalandı");
@@ -179,7 +167,7 @@ function upgradeProofShare() {
   const old = $("#xShare");
   if (old) {
     const replacement = old.cloneNode(true);
-    replacement.textContent = en ? "Share on X" : "X'te paylaş";
+    replacement.textContent = window.RD_I18N.language() === "en" ? "Share on X" : "X’te paylaş";
     old.replaceWith(replacement);
     replacement.onclick = () => copy(proofShareText(), window.RD_I18N.t("app.xTextCopied"));
   }
@@ -215,7 +203,7 @@ function upgradeAgentSetup() {
   if (!card || $("#rdQuickSetup")) return;
 
   const warning = card.querySelector(".warning-box span");
-  if (warning) warning.textContent = window.RD_I18N.t("app.agentCadence");
+  if (warning) warning.textContent = "Heartbeat yaklaşık 30 dakikada bir kontrol edilir. Signed check-in yalnızca günde iki ayrı cron penceresinde çalışır; manuel/push testleri signed mesaj göndermez.";
 
   const didSecretBtn = $("#copyDidSecret");
   if (didSecretBtn?.parentElement) didSecretBtn.parentElement.classList.add("rd-hidden");

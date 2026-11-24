@@ -154,7 +154,11 @@ function fixQuickSetupOrder(isEn) {
   }
 
   const warning = document.querySelector('[data-step="11"] .warning-box span');
-  if (warning) warning.textContent = window.RD_I18N.t("app.agentCadence", {}, isEn ? "en" : "tr");
+  if (warning) {
+    warning.textContent = isEn
+      ? "Primary and backup workflows run on staggered schedules. If GitHub delays one schedule, a later trigger can recover. Durable Technocore state keeps signed check-ins at least 12 hours apart."
+      : "Ana ve yedek workflow farklı dakikalarda çalışır. GitHub bir schedule'ı geciktirirse sonraki tetikleyici telafi edebilir. Technocore kalıcı kilidi signed check-in'leri en az 12 saat aralıklı tutar.";
+  }
 
   const autoOut = document.querySelector("#autoOut");
   if (autoOut) {

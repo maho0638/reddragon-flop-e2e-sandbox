@@ -16,7 +16,7 @@ const viewports = [
 ];
 const statusFixture = {
   schema: "reddragon-flop-live-status/v1", checkedAt: "2026-11-10T12:00:00.000Z", stale: false,
-  testnet: { state: "not-live", release: "next (unreleased)" },
+  testnet: { state: "live-unscored", network: "live, unscored", release: "next (unreleased)", vouchers: "disabled", publicSelfClaim: false, scoringActivationAnnounced: false, genesis: "0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800" },
   devnet: { state: "public-development-network", rewards: "none", operatorEnrollment: "administrator-assisted / public self-service unavailable" },
   timeline: { state: "verified", updated: "2026-10-30", testnetTarget: "Tuesday 3 November 2026", testnetOpenClaim: true, devnetRewards: "none" },
   services: { rpc: { state: "verified" }, gateway: { state: "catalog-responded", count: 2 }, validator: { state: "verified" } },
@@ -58,8 +58,6 @@ async function newPage(viewport, preferredLocale) {
       if (locale === "tr" || locale === "en") localStorage.setItem("reddragon-lang", locale);
       sessionStorage.setItem("__rdBrowserSmokeInitialized", "1");
     }
-    window.__rdAcceptanceAddonsReady = false;
-    window.addEventListener("rd:addonsready", () => { window.__rdAcceptanceAddonsReady = true; }, { once: true });
   }, preferredLocale);
   await context.route("**/api/flop-status", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify(statusFixture)
@@ -77,10 +75,6 @@ async function newPage(viewport, preferredLocale) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(bodies[action] || { ok: true }) });
   });
   return { context, page: await context.newPage() };
-}
-
-async function waitForAddonsReady(page) {
-  await page.waitForFunction(() => window.__rdAcceptanceAddonsReady === true, null, { timeout: 30_000 });
 }
 
 async function activate(locator, viewport) {
@@ -119,20 +113,20 @@ async function assertVisibleCopyLocale(page, locale, label, { home = false } = {
   }
   if (!home) return;
   const expected = locale === "en" ? {
-    site: "𝕏 Share this site",
-    title: "Share · everyone uses their own account",
-    description: "The X button opens the composer for the X account currently signed in to this browser. The project account is mentioned as @lionmousse. For Medium, copy the draft and publish it from your own account.",
-    follow: "Follow @lionmousse"
+    proofImport: "Import Public Proof JSON",
+    repository: "Open GitHub repository",
+    share: "𝕏 Share this site",
+    heading: "Share · everyone uses their own account"
   } : {
-    site: "𝕏 Siteyi paylaş",
-    title: "Paylaş · herkes kendi hesabından",
-    description: "X butonu bu tarayıcıda açık olan X hesabının paylaşım ekranını açar. Metinde @lionmousse geçtiği için proje hesabı mention alır. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.",
-    follow: "@lionmousse hesabını takip et"
+    proofImport: "Public Proof JSON içe aktar",
+    repository: "GitHub repo'yu aç",
+    share: "𝕏 Siteyi paylaş",
+    heading: "Paylaş · herkes kendi hesabından"
   };
-  assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.site, `${label}: localized social share link`);
-  assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.title, `${label}: localized share panel heading`);
-  assert.equal((await page.locator("#rdSharePanel p").textContent()).trim(), expected.description, `${label}: localized share panel description`);
-  assert.equal((await page.locator('#rdSocialStrip a[href*="x.com/"]').textContent()).trim(), expected.follow, `${label}: localized X profile link`);
+  assert.equal((await page.locator("#rdProofImport button").first().textContent()).trim(), expected.proofImport, `${label}: public-proof action locale`);
+  assert.equal((await page.locator("#repoBtn").textContent()).trim(), expected.repository, `${label}: GitHub action locale`);
+  assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.share, `${label}: social share locale`);
+  assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.heading, `${label}: share panel locale`);
 }
 
 before(async () => {
@@ -165,11 +159,13 @@ test("main page boots from empty storage and translates in desktop and mobile", 
     page.on("pageerror", (error) => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.locator("h1").waitFor({ state: "visible" });
       await page.locator("#rdTestnetToolkit").waitFor({ state: "visible" });
       await page.locator("#rdTclkWorkbench").waitFor({ state: "visible" });
       await page.locator("#rdProvFixSummary").waitFor({ state: "visible" });
+      await page.locator("#rdProofImport button").first().waitFor({ state: "visible" });
+      await page.locator("#repoBtn").waitFor({ state: "visible" });
+      await page.locator("#rdSharePanel h3").waitFor({ state: "visible" });
       const catalogAudit = await page.evaluate(() => window.RD_I18N.audit());
       assert.ok(catalogAudit.catalogs >= 6, `all module catalogs registered: ${JSON.stringify(catalogAudit)}`);
       assert.match(await page.locator("#heroDid").textContent(), /did:key:z6Mk/);
@@ -191,7 +187,6 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.match(await page.evaluate(() => localStorage.getItem("reddragon-lang")), /^(tr|en)$/);
       await page.locator('#rdLangSwitcher button[data-lang="en"]').click();
       await page.locator(".hero-actions .ghost-link").filter({ hasText: "Open FLOP Observatory" }).waitFor({ state: "visible" });
-      await waitForAddonsReady(page);
       assert.equal(await page.locator("html").getAttribute("lang"), "en");
       assert.equal(await page.locator('.hero-actions .ghost-link[href="/flop"]').getAttribute("href"), "/flop");
       assert.match(await page.locator("#brandSub").textContent(), /Community Observatory/);
@@ -212,7 +207,6 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.equal((await page.locator("#toast").textContent()).trim(), "The password must be at least 12 characters.");
       await page.locator('#rdLangSwitcher button[data-lang="tr"]').click();
       await page.locator(".hero-actions .ghost-link").filter({ hasText: "FLOP Gözlemevini aç" }).waitFor({ state: "visible" });
-      await waitForAddonsReady(page);
       assert.equal(await page.locator("html").getAttribute("lang"), "tr");
       assert.match(await page.locator("#brandSub").textContent(), /Topluluk Gözlemevi/);
       assert.match(await page.locator("#rdDidProvenance .rd-prov-head h2").textContent(), /bu aracı kim geliştirdi/i);
@@ -238,11 +232,11 @@ test("step 11 warning copy stays separated and localized at all supported widths
   const translations = {
     tr: {
       title: "İstenmeyen ileti değil, sürdürülebilir etkinlik",
-      description: "Ana workflow UTC :17 ve :47 dakikalarında, yedek workflow :02 ve :32 dakikalarında zamanlanır. GitHub zamanlanmış çalışmaları geciktirebilir. İmzalı gönderiler yalnızca etkinse ve kalıcı aralık sınırı izin veriyorsa yollanır (varsayılan 12 saat). Daha sık mesajların airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
+      description: "Otomasyon 30 dakikada bir çalışır; imzalı gönderiler için varsayılan aralık 12 saattir. Daha sık mesaj göndermenin airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
     },
     en: {
       title: "Sustainable activity, not spam",
-      description: "The primary workflow is scheduled at :17 and :47 UTC; the backup is scheduled at :02 and :32 UTC. GitHub may delay scheduled runs. Signed posts are sent only when enabled and the durable interval allows them (12 hours by default). There is no official evidence that more frequent messages improve airdrop eligibility."
+      description: "The workflow wakes every 30 minutes; the default interval for signed posts is 12 hours. There is no official evidence that sending messages more often improves airdrop eligibility."
     }
   };
 
@@ -250,7 +244,6 @@ test("step 11 warning copy stays separated and localized at all supported widths
     const { context, page } = await newPage(viewport, "tr");
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       const warning = page.locator('[data-step="11"] > .warning-box');
       const heading = warning.locator("b");
       const description = warning.locator("span");
@@ -262,7 +255,6 @@ test("step 11 warning copy stays separated and localized at all supported widths
             page.waitForNavigation({ waitUntil: "load" }),
             page.locator('#rdLangSwitcher button[data-lang="' + locale + '"]').click()
           ]);
-          await waitForAddonsReady(page);
         }
         const observed = await page.evaluate(() => ({
           htmlLang: document.documentElement.lang,
@@ -377,7 +369,8 @@ test("/flop Turkish and English copy, fail-closed status, and responsive layout"
       assert.equal(await page.locator("footer > span:last-child").textContent(), "Community-built · source-first · no affiliation claim");
       await page.reload();
       assert.equal(await language.inputValue(), "en", "English choice should survive reload");
-      assert.match(await page.locator("#rdLiveTestnet [data-status]").textContent(), /planned|unreleased/i);
+      assert.match(await page.locator("#rdLiveTestnet [data-status]").textContent(), /live.*unscored/i);
+      assert.match(await page.locator("#rdLiveTestnet [data-detail]").textContent(), /no announced activation block|no announced.*date/i);
       assert.match(await page.locator("#rdLiveDevnet [data-detail]").textContent(), /administrator-assisted|administrator assistance/i);
       assert.doesNotMatch(await page.locator("#rdLiveDevnet [data-detail]").textContent(), /public self-service unavailable/);
       await assertVisibleCopyLocale(page, "en", `${viewport.name}/flop`);
@@ -416,7 +409,7 @@ test("language changes render all panels consistently across reloads and in-flig
     assert.equal(await page.evaluate(() => localStorage.getItem("reddragon-lang")), "en");
     await expectCapacityMessage(page, "en", "The live source returned HTTP 503.");
     releaseStatus();
-    await page.waitForFunction(() => document.querySelector("#rdLiveTestnet [data-status]")?.textContent.includes("Planned / unreleased"));
+    await page.waitForFunction(() => document.querySelector("#rdLiveTestnet [data-status]")?.textContent.includes("Live · unscored opening"));
     assert.equal(await page.locator("html").getAttribute("lang"), "en", "late live data uses current locale");
     await language.selectOption("tr");
     await expectCapacityMessage(page, "tr", "Canlı kaynak HTTP 503 yanıtı verdi.");
@@ -459,13 +452,11 @@ test("DID create, encrypted backup, restore, prompts and mocked signed flows wor
     const errors = []; page.on("pageerror", error => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.locator("#createBtn").waitFor({ state: "visible" });
       const langButton = page.locator(`#rdLangSwitcher button[data-lang="${locale}"]`);
       if (await page.locator("html").getAttribute("lang") !== locale) {
         if (viewport.isMobile) await langButton.tap(); else await langButton.click();
         await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
-        await waitForAddonsReady(page);
       }
       const shortText = locale === "tr" ? "Parola en az 12 karakter olmalı." : "The password must be at least 12 characters.";
       await activate(page.locator("#createBtn"), viewport);
@@ -525,7 +516,6 @@ test("candidate X share copies localized text without opening X or writing exter
     page.on("pageerror", error => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
       await page.locator("#createBtn").waitFor({ state: "visible" });
       await page.locator("#pass1").fill("ephemeral-browser-only-password");
@@ -541,7 +531,6 @@ test("candidate X share copies localized text without opening X or writing exter
       const shareButton = page.locator("#xShare");
       assert.equal(await shareButton.isEnabled(), true, "a recorded contribution enables X sharing");
       assert.equal((await shareButton.textContent()).trim(), locale === "tr" ? "X'te paylaş" : "Share on X");
-
       const unexpectedPopups = [];
       const pageCountBeforeShare = context.pages().length;
       page.on("popup", popup => unexpectedPopups.push(popup));

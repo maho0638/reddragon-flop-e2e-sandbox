@@ -109,9 +109,9 @@ test("TR/EN visible labels and dynamic live copy use the selected locale", () =>
   assert.match(languageStable, /localStorage\.setItem\(LANG_KEY, next\)[\s\S]*location\.reload\(\)/);
 });
 
-test("English setup readiness is translated and usage guide styling stays within strict CSP", () => {
-  assert.match(languageStable, /html\("#autoOut", en[\s\S]*?Project files are ready/);
-  assert.match(languageStable, /Projede <code>\.github\/workflows\/technocore-agent\.yml<\/code>/);
+test("English setup status is localized by the final UI pass and guide styles stay CSP-safe", () => {
+  assert.match(finalFixes, /autoOut\.textContent = isEn[\s\S]*?Fork-safe agent: the DID is derived from the private key\./);
+  assert.match(finalFixes, /Fork-safe ajan: DID private key'den otomatik türetilir\./);
   assert.doesNotMatch(finalFixes, /ensureUsageGuideStyles|document\.createElement\(["']style["']\)/);
   assert.match(styles, /#rdUsageGuide \.rd-guide-kicker/);
   assert.match(styles, /#rdUsageGuide \.rd-guide-danger/);

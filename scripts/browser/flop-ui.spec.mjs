@@ -117,16 +117,20 @@ async function assertVisibleCopyLocale(page, locale, label, { home = false } = {
     repository: "Open GitHub repository",
     share: "𝕏 Share this site",
     heading: "Share · everyone uses their own account",
-    readiness: "Project files are ready: .github/workflows/technocore-agent.yml and scripts/technocore-agent.mjs."
+    readiness: "Fork-safe agent: the DID is derived from the private key. Primary + backup schedules provide redundancy; only one GitHub Secret is required."
   } : {
     proofImport: "Herkese Açık Kanıt JSON'unu içe aktar",
     repository: "GitHub repo'yu aç",
     share: "𝕏 Siteyi paylaş",
     heading: "Paylaş · herkes kendi hesabından",
-    readiness: "Projede .github/workflows/technocore-agent.yml ve scripts/technocore-agent.mjs hazır."
+    readiness: "Fork-safe ajan: DID private key'den otomatik türetilir. Ana + yedek schedule ile yedekli çalışır; yalnızca tek GitHub Secret gerekir."
   };
   assert.equal((await page.locator("#rdProofImport button").first().textContent()).trim(), expected.proofImport, `${label}: public-proof action locale`);
+  await page.waitForFunction(expectedText => (document.querySelector("#autoOut")?.innerText || "").replace(/\s+/g, " ").trim() === expectedText, expected.readiness);
   assert.equal((await page.locator("#autoOut").innerText()).replace(/\s+/g, " ").trim(), expected.readiness, `${label}: GitHub readiness locale`);
+  await page.locator("#rdUsageGuide").waitFor({ state: "visible" });
+  const guideStyle = await page.locator("#rdUsageGuide").evaluate(element => ({ border: getComputedStyle(element).borderTopStyle, width: getComputedStyle(element).borderTopWidth }));
+  assert.deepEqual(guideStyle, { border: "solid", width: "1px" }, `${label}: usage guide style must load from external CSS under CSP`);
   assert.equal((await page.locator("#repoBtn").textContent()).trim(), expected.repository, `${label}: GitHub action locale`);
   assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.share, `${label}: social share locale`);
   assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.heading, `${label}: share panel locale`);

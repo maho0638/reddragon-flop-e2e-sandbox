@@ -40,7 +40,7 @@ jobs:
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
           echo "PRODUCTION_SOURCE_BASE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
-          echo "SANDBOX_FIX_PARENT=5a8a017afe490b14939d7d0c9af5a206918e332a"
+          echo "SANDBOX_FIX_PARENT=e53c959f5b848cc1221d91e8ad04f7246e351f03"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
           echo "MAIN_SOURCE_CANDIDATE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
           sha256sum --check <<'SHA256'
@@ -74,7 +74,7 @@ jobs:
           d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
           1f6d6f76d5228cb4dd2b1c3b5ff004565fc10e77c124a857c21345201d5b7598  public/language-safe.js
           004196845357912f522fe55796ce1011a8beb7342efb95d89438c95e2f73a561  public/language-stable.css
-          0f8511296a734324093960180b4278d87ee7e51e33f134c76f043b47b0c18183  public/language-stable.js
+          8831e030194512d8d9b210e3e07cf0693c8c9568eb457a1c580bb5e10714295d  public/language-stable.js
           cb3dd30f5dd7b2a6054ec2260018d2e43daece5ff7de428b2d70cacfe2f27dac  public/language.js
           a4db72c11f8ee57348af27d7e391eb013d5564d21ef1c3683a4d784d6941db67  public/live-observatory.css
           e95b0c153ca2f26117585c64bb3d00d493d5fddf570494ec67d3f85bd6b101c0  public/live-observatory.js
@@ -96,13 +96,13 @@ jobs:
           b969a17949b3d5a6cbe9c74d0b8a71700e91d253b8c1951fbede952c06304487  public/testnet-toolkit.css
           24b123cf155995b6cff5fbf643ba98184f8c9d3cb3a99132ed1df64a8b507b91  public/testnet-toolkit.js
           be53b83d0e309a65b9594214ab07328e34ff81cd3221cefc919acb1594b9bb3d  public/ui-i18n.js
-          56086d3ccf4909d6d18652cfbbb68d6625d3f8ea71173f4f9ca0fc9d4bc5aab1  scripts/browser/flop-ui.spec.mjs
+          058639c42da3941de58c63ea5c3c51b2691e12db7e6c6ba7d962bffb0ac47cbf  scripts/browser/flop-ui.spec.mjs
           b82eee8112b6b1071691bf68e84157a6128b084c260462a3cc0da00a205f86b1  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
           f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
           56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          f0d3a5478d17d2b172ab39387fecdbcfacad18b0a510d0169fe8d5b2a2ba190d  scripts/ui-i18n.test.mjs
+          881f4c233a1f2c0099f0df6a443ae1203ce88d6725baab87c20282dc1b6e170b  scripts/ui-i18n.test.mjs
           fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
           SHA256
       - name: Install pinned Playwright package

@@ -118,7 +118,7 @@ async function assertVisibleCopyLocale(page, locale, label, { home = false } = {
     share: "𝕏 Share this site",
     heading: "Share · everyone uses their own account"
   } : {
-    proofImport: "Public Proof JSON içe aktar",
+    proofImport: "Herkese Açık Kanıt JSON'unu içe aktar",
     repository: "GitHub repo'yu aç",
     share: "𝕏 Siteyi paylaş",
     heading: "Paylaş · herkes kendi hesabından"
@@ -232,11 +232,11 @@ test("step 11 warning copy stays separated and localized at all supported widths
   const translations = {
     tr: {
       title: "İstenmeyen ileti değil, sürdürülebilir etkinlik",
-      description: "Otomasyon 30 dakikada bir çalışır; imzalı gönderiler için varsayılan aralık 12 saattir. Daha sık mesaj göndermenin airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
+      description: "Her workflow 30 dakikada bir planlanır; ana ve yedek akış 15 dakika kaydırılmıştır. GitHub planlı çalıştırmaları geciktirebilir veya atlayabilir. TECHNOCORE_MIN_POST_HOURS varsayılanı 12 saattir ve kalıcı durumla uygulanır; bu değişken aralığı değiştirir. Daha sık mesajın airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
     },
     en: {
       title: "Sustainable activity, not spam",
-      description: "The workflow wakes every 30 minutes; the default interval for signed posts is 12 hours. There is no official evidence that sending messages more often improves airdrop eligibility."
+      description: "Each workflow is scheduled every 30 minutes, offset by 15 minutes. GitHub can delay or skip scheduled runs. TECHNOCORE_MIN_POST_HOURS defaults to 12 and is enforced with durable state; changing it changes the minimum gap. There is no official evidence that more frequent messages improve airdrop eligibility."
     }
   };
 

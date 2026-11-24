@@ -310,6 +310,7 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.match(await page.evaluate(() => navigator.clipboard.readText()), /"did":\s*"did:key:z6Mk/);testedActions++;
     await page.locator("#rdLangSwitcher button[data-lang='en']").click();
     await page.waitForFunction(() => document.documentElement.lang === "en");
+    await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, {timeout: 5000});
     const unexpectedPopups = [];
     page.on("popup", popup => unexpectedPopups.push(popup));
     const pageCountBeforeShare = context.pages().length;

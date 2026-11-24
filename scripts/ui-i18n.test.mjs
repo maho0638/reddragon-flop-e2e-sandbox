@@ -156,14 +156,20 @@ test("both pages select and render the saved language before add-on loading", ()
   assert.match(languageStable, /window\.addEventListener\("rd:addonsready"/);
 });
 
+test("late-injected enhancement and proof controls trigger a selected-language refresh", () => {
+  assert.match(languageStable, /window\.addEventListener\("rd:dynamicuiready", refreshLanguageForDynamicUi\)/);
+  assert.match(enhancements, /window\.dispatchEvent\(new Event\("rd:dynamicuiready"\)\)/);
+  assert.match(proofImport, /installUi\(\);\s*window\.dispatchEvent\(new Event\("rd:dynamicuiready"\)\)/);
+});
+
 test("browser locale assertions are page-scoped and restore the actual encrypted JSON download", () => {
-  assert.match(flopBrowserAudit, /async function assertVisibleCopyLocale\\(page, locale, label, \\{ home = false \\} = \\{\\}\\)/);
-  assert.match(flopBrowserAudit, /if \\(!home\\) return;/);
-  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\\(page, "en", `\\$\\{viewport\\.name\\}\\/home`, \\{ home: true \\}\\)/);
-  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\\(page, "tr", `\\$\\{viewport\\.name\\}\\/home`, \\{ home: true \\}\\)/);
-  assert.match(acceptanceAudit, /assert\\.match\\(backupName, \\\/\\\\\\.json\\$\\/i/);
-  assert.match(acceptanceAudit, /chooser\\.setFiles\\(\\{ name: backupName, mimeType: "application\\/json", buffer: backupContents \\}\\)/);
-  assert.match(acceptanceAudit, /backup\\.suggestedFilename\\(\\), "ephemeral-ui-audit-only-password"/);
+  assert.match(flopBrowserAudit, /async function assertVisibleCopyLocale\(page, locale, label, \{ home = false \} = \{\}\)/);
+  assert.match(flopBrowserAudit, /if \(!home\) return;/);
+  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\(page, "en", `\$\{viewport\.name\}\/home`, \{ home: true \}\)/);
+  assert.match(flopBrowserAudit, /assertVisibleCopyLocale\(page, "tr", `\$\{viewport\.name\}\/home`, \{ home: true \}\)/);
+  assert.match(acceptanceAudit, /assert\.match\(backupName, \/\\\.json\$\/i/);
+  assert.match(acceptanceAudit, /chooser\.setFiles\(\{ name: backupName, mimeType: "application\/json", buffer: backupContents \}\)/);
+  assert.match(acceptanceAudit, /backup\.suggestedFilename\(\), "ephemeral-ui-audit-only-password"/);
 });
 
 test("browser workflow can run only on the QA branch with read-only repository permissions", () => {

@@ -138,7 +138,7 @@ async function acceptDialogDuring(page, action, promptText) {
   await Promise.all([action(), dialogHandled]);
 }
 async function restoreDownloadedBackup(page, backupPath, backupName, password) {
-  assert.match(backupName, /\\.json$/i, "encrypted identity backup must retain its .json filename");
+  assert.match(backupName, /\.json$/i, "encrypted identity backup must retain its .json filename");
   const backupContents = await readFile(backupPath);
   const chooserEvent = page.waitForEvent("filechooser", { timeout: 30_000 });
   await page.locator("label.filebtn").filter({ has: page.locator("#restoreInput") }).click();

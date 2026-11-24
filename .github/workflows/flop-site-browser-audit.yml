@@ -35,6 +35,7 @@ jobs:
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
           echo "SOURCE_FIX_COMMIT=cf70bfc463d6a7b44e273c92ec80602f92d9248b"
+          echo "SANDBOX_FIX_PARENT=fb94a3c51b012999bb5e5479d017b81a852345e6"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md

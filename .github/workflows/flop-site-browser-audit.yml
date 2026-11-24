@@ -10,6 +10,8 @@ on:
       - public/styles.css
       - scripts/ui-i18n.test.mjs
       - scripts/browser/flop-ui.spec.mjs
+      - scripts/local-preview-http-smoke.mjs
+      - scripts/local-preview-server.mjs
   workflow_dispatch:
     inputs:
       run_production_acceptance:
@@ -96,13 +98,13 @@ jobs:
           b969a17949b3d5a6cbe9c74d0b8a71700e91d253b8c1951fbede952c06304487  public/testnet-toolkit.css
           24b123cf155995b6cff5fbf643ba98184f8c9d3cb3a99132ed1df64a8b507b91  public/testnet-toolkit.js
           be53b83d0e309a65b9594214ab07328e34ff81cd3221cefc919acb1594b9bb3d  public/ui-i18n.js
-          058639c42da3941de58c63ea5c3c51b2691e12db7e6c6ba7d962bffb0ac47cbf  scripts/browser/flop-ui.spec.mjs
+          ee0a52a362154841c15bae05e933ce1629608941c2b5867af17d5ffd8e161c99  scripts/browser/flop-ui.spec.mjs
           b82eee8112b6b1071691bf68e84157a6128b084c260462a3cc0da00a205f86b1  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
-          f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
-          56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs
+          ece3efe4ba8036163732a626a5c86eddcea210a2b07983cff4f4464fa4d0f260  scripts/local-preview-http-smoke.mjs
+          dce9f56045e93a74b60947310639d21c149ad54157e6562f67d5cece142eadc9  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          881f4c233a1f2c0099f0df6a443ae1203ce88d6725baab87c20282dc1b6e170b  scripts/ui-i18n.test.mjs
+          cfaed2934f36160bd685516c3ce5a07545f0e77cb8724f9aa7848e1248b76a18  scripts/ui-i18n.test.mjs
           fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
           SHA256
       - name: Install pinned Playwright package

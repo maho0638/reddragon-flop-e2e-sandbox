@@ -58,6 +58,10 @@ async function newPage(viewport, preferredLocale) {
       if (locale === "tr" || locale === "en") localStorage.setItem("reddragon-lang", locale);
       sessionStorage.setItem("__rdBrowserSmokeInitialized", "1");
     }
+    document.addEventListener("securitypolicyviolation", event => {
+      window.__rdCspViolations = window.__rdCspViolations || [];
+      window.__rdCspViolations.push({ directive: event.violatedDirective, blockedURI: event.blockedURI });
+    });
   }, preferredLocale);
   await context.route("**/api/flop-status", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify(statusFixture)
@@ -111,6 +115,8 @@ async function assertVisibleCopyLocale(page, locale, label, { home = false } = {
     const untranslated = /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify|official timeline and reward faq|yellow paper file history|windowed messages across the returned room page|last successful\/attempted refresh|the current source status is published|read-only rpc check|public testnet)\b/i.exec(copy);
     assert.equal(untranslated, null, `${label}: English UI phrase remains: ${untranslated?.[0]}`);
   }
+  const styleViolations = await page.evaluate(() => (window.__rdCspViolations || []).filter(item => item.directive.startsWith("style-src")));
+  assert.deepEqual(styleViolations, [], `${label}: CSP blocked styles: ${JSON.stringify(styleViolations)}`);
   if (!home) return;
   const expected = locale === "en" ? {
     proofImport: "Import Public Proof JSON",

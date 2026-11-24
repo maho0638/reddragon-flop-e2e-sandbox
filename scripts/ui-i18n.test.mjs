@@ -11,6 +11,13 @@ const enhancements = await readFile(new URL("../public/enhancements.js", import.
 const languageStable = await readFile(new URL("../public/language-stable.js", import.meta.url), "utf8");
 const finalFixes = await readFile(new URL("../public/final-fixes.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const localPreviewServer = await readFile(new URL("./local-preview-server.mjs", import.meta.url), "utf8");
+let vercelConfig = null;
+try {
+  vercelConfig = await readFile(new URL("../vercel.json", import.meta.url), "utf8");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 const config = await readFile(new URL("../public/config.js", import.meta.url), "utf8");
 const proofImport = await readFile(new URL("../public/proof-import.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
@@ -115,6 +122,12 @@ test("English setup status is localized by the final UI pass and guide styles st
   assert.doesNotMatch(finalFixes, /ensureUsageGuideStyles|document\.createElement\(["']style["']\)/);
   assert.match(styles, /#rdUsageGuide \.rd-guide-kicker/);
   assert.match(styles, /#rdUsageGuide \.rd-guide-danger/);
+  assert.match(localPreviewServer, /style-src 'self'/);
+  assert.doesNotMatch(localPreviewServer, /unsafe-inline/);
+  if (vercelConfig !== null) {
+    assert.match(vercelConfig, /style-src 'self'/);
+    assert.doesNotMatch(vercelConfig, /unsafe-inline/);
+  }
 });
 
 test("X proof button copies locally while explicit share intents stay localized", () => {

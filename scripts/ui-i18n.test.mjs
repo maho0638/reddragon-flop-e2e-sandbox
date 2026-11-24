@@ -226,3 +226,13 @@ test("browser workflow can run only on the QA branch with read-only repository p
   assert.match(acceptanceAudit, /Only test data; no persistent test identities or real relay writes/);
   assert.match(acceptanceAudit, /route\("\*\*\/api\/relay"/);
 });
+
+
+test("profile writes are signed by the active Ed25519 DID and Testnet runtime is explicit", async () => {
+  const relay = await readFile(new URL("../api/relay.js", import.meta.url), "utf8");
+  const statusApi = await readFile(new URL("../api/flop-status.js", import.meta.url), "utf8");
+  assert.match(app, /crypto\.subtle\.sign\(\{name:"Ed25519"\},state\.privateKey,payload\)/);
+  assert.match(relay, /writeNs === "profile"[\s\S]*verifyDidPayload/);
+  assert.match(statusApi, /runtimeSpecVersion/);
+  assert.match(statusApi, /1014035/);
+});

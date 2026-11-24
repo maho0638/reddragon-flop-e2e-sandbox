@@ -5,13 +5,26 @@ on:
       - qa/flop-e2e-9bbc626
     paths:
       - .github/workflows/flop-site-browser-audit.yml
+      - api/flop-status.js
+      - api/relay.js
+      - package.json
+      - public/app.js
       - public/final-fixes.js
+      - public/flop-live-status.js
+      - public/flop-source-status.json
+      - public/flop.html
       - public/language-stable.js
+      - public/llms.txt
       - public/styles.css
-      - scripts/ui-i18n.test.mjs
       - scripts/browser/flop-ui.spec.mjs
+      - scripts/browser/site-acceptance.spec.mjs
+      - scripts/flop-status.test.mjs
       - scripts/local-preview-http-smoke.mjs
       - scripts/local-preview-server.mjs
+      - scripts/relay-security-audit.test.mjs
+      - scripts/relay.test.mjs
+      - scripts/ui-i18n.test.mjs
+      - scripts/verify-flop-observatory.test.mjs
   workflow_dispatch:
     inputs:
       run_production_acceptance:
@@ -42,19 +55,19 @@ jobs:
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
           echo "PRODUCTION_SOURCE_BASE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
-          echo "SANDBOX_FIX_PARENT=e53c959f5b848cc1221d91e8ad04f7246e351f03"
+          echo "SANDBOX_E2E_BASELINE=5b8bc9fb363ccbe99ebd0effae78b266eefb823b"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
-          echo "MAIN_SOURCE_CANDIDATE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
+          echo "MAIN_SOURCE_BASE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
-          a67e6a56e35aa5a1946843d74920dae46c86826631b17110a57a53b50ee6828c  api/flop-status.js
-          9a63745452c91f7098d31d5652c3d304aa3ba6c77bb0ca97b5d8945dcbd6b52b  api/relay.js
-          8a9b52b3ba5e959f37091b06c288e932e8fca9ac3046e20e7fa946931d666dfb  package.json
+          39aa492001061f655653776edec1dd51f249dc529ca0c9c1b89e306bf99df4e4  api/flop-status.js
+          6e47cdf1694f77be5459c2de81f44103eb4a1e5eb1b97af8e1256c96605c6d67  api/relay.js
+          a6c937200e97ef3e0c6859efcb95a76af1f4bfbbe84a6851ab74f18447a13b79  package.json
           cd3b30609ec12e468807f805c2666b0e2eb9d312b098b40ef4fb41a67e4c0332  public/404.html
           9945c501cc2439e13bd761796548fb8ab59becf76b5a67cb97dbdc991f258975  public/activity-proof.js
           9d08c13844b613284666a437c728e1bdda7101d5993ac63bcd803638eb3677e8  public/agent-field.css
           84f37a6630405cc0254d939ca3dad3ee2b18fd6ef867225136d7140fc36a6376  public/agent-field.js
-          c25f4adac4e6ec68f765a4ecf135a16c91f98a3f1a12c8cd33395bd56dbb18e1  public/app.js
+          6ed594ad1b6df3b1d1ca194f2548c04bf7b94b461fe59f7e2580af6667d1b6a3  public/app.js
           a0fd7d3cb01cd349de100ce1d8bb056026d36471d68f391c35374b3eda7de43a  public/assets/reddragon.jpg
           367095779728296c9f9adabcc79d7eb0d005b5cc096df3eacf5695c54c37c608  public/community-positioning.js
           01457a6db1388beb2a016b0746ef945ecfea73ff1248c733711706e16381aca2  public/config.js
@@ -65,12 +78,12 @@ jobs:
           2e5c60f68301389013700e025fd4efeada1293c7b3d1d0b20df22faec1afdb1c  public/enhancements.js
           6e71e41ac2406d4b1fc806327ded623842fc6329e3e2cec5bef2feee2c8dfa13  public/final-fixes.js
           307099f92e0f5497e78a542f457c44afa9bb9310d5780b6c6744b571ccd6d531  public/flop-did-utils.js
-          53e279a37827f7101c741f58ad75ee7282a4200cbcdb9ffdd6718f0563bb241e  public/flop-live-status.js
+          78bef359d1460a33b615af87927838ffae42563405a62e716ee12a57c4b579f4  public/flop-live-status.js
           afb147a61c1b6bb64eaf2be6d20da883b1db6e708723e7b906edd84e74858828  public/flop-responsive-fixes.css
-          acf724bea3d788c617d8613a6e99a70c8868d575f333c7b5d795fe4e3f53b033  public/flop-source-status.json
+          4bea38f032c148a7017a49e91e35dad0b21d6c7c7d1ac8ad1721fbc314e18bd2  public/flop-source-status.json
           edbd04f2f9feb69fc7e397700d9f43e5a6d35784fcc7fa07d60693c0384da5c2  public/flop-spec-refresh.js
           69fb10422e5548154a5772bcb32ac0ce11110f22a0f4b9a2d0e3b9e55ff8415d  public/flop.css
-          b69f633380370f45cb90b93aa22cb9b7312624e0653b02b501d1a03323f41bdb  public/flop.html
+          091c296f243b86eaeab0c3e906c48521bb55481107047bfefb372eca503cd226  public/flop.html
           c1c9741018193283436213effb29a7c567c45b8c04fe1f04a1b607b060d9aadc  public/index.html
           c93940db073182b505b8cfec841690f3a58948ee338ae316d3df916807769780  public/language-bootstrap.js
           d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
@@ -80,7 +93,7 @@ jobs:
           cb3dd30f5dd7b2a6054ec2260018d2e43daece5ff7de428b2d70cacfe2f27dac  public/language.js
           a4db72c11f8ee57348af27d7e391eb013d5564d21ef1c3683a4d784d6941db67  public/live-observatory.css
           e95b0c153ca2f26117585c64bb3d00d493d5fddf570494ec67d3f85bd6b101c0  public/live-observatory.js
-          03e23e85f10a72f09a026311c3173ef24e5a16b77493b4efd4fdd1beb15a3b78  public/llms.txt
+          85555f774f289fa361d2ab4e2606cd40605dc2ba9d4819b96cb3d43158dd4c01  public/llms.txt
           ab0b0d28210f47bef2549373cd7b507959e367b55a0e36d54bfc7eafe84e1574  public/patches.js
           1f18fdc1e8e23f21d9930a77ccb1faddaf3cef6ec386366923aa5e1d9ba0a282  public/progress-scope-fix.js
           7d34a8eea2591f4305ddf1f66a8a4372fac37d50eabe5d7eb688b9c9b6b6eb1a  public/proof-import.js
@@ -99,13 +112,16 @@ jobs:
           24b123cf155995b6cff5fbf643ba98184f8c9d3cb3a99132ed1df64a8b507b91  public/testnet-toolkit.js
           be53b83d0e309a65b9594214ab07328e34ff81cd3221cefc919acb1594b9bb3d  public/ui-i18n.js
           ee0a52a362154841c15bae05e933ce1629608941c2b5867af17d5ffd8e161c99  scripts/browser/flop-ui.spec.mjs
-          b82eee8112b6b1071691bf68e84157a6128b084c260462a3cc0da00a205f86b1  scripts/browser/site-acceptance.spec.mjs
+          21e3b27f9e8dab16c9ab148d242271cb7b4a48934e7bb2598b8cd41eb1d2c7de  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
+          a2471fed215ddd18f2212454665aeb847913eb09e209eb9d620626bad67c16bf  scripts/flop-status.test.mjs
           ece3efe4ba8036163732a626a5c86eddcea210a2b07983cff4f4464fa4d0f260  scripts/local-preview-http-smoke.mjs
           dce9f56045e93a74b60947310639d21c149ad54157e6562f67d5cece142eadc9  scripts/local-preview-server.mjs
-          65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          cfaed2934f36160bd685516c3ce5a07545f0e77cb8724f9aa7848e1248b76a18  scripts/ui-i18n.test.mjs
+          7707a23a13cacbc83fe993a9a07eddfad23beea20a6e5d3019ec940ba830e471  scripts/relay-security-audit.test.mjs
+          e0a474b2ecc90e9ba39eee427c2c27862ad50fedfb295d30b7746718ecdf3b48  scripts/relay.test.mjs
           fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
+          678cd4bd41d03fbdabf3c85d6a6e3938521777e9b0221b328365d409bacb1e24  scripts/ui-i18n.test.mjs
+          4ce57ab15108a32475bf758236b9ae2ce2b97c68da81ef83449b7c1acfd01cba  scripts/verify-flop-observatory.test.mjs
           SHA256
       - name: Install pinned Playwright package
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

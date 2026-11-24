@@ -8,6 +8,6 @@
     "test:local-preview": "node scripts/local-preview-http-smoke.mjs",
     "preview:local": "node scripts/local-preview-server.mjs",
     "test:browser": "node scripts/run-local-browser-acceptance.mjs",
-    "test:security-regressions": "node --test scripts/did-backup-restore.test.mjs scripts/relay-security-audit.test.mjs scripts/ui-i18n.test.mjs"
+    "test:security-regressions": "node --test scripts/did-backup-restore.test.mjs scripts/relay-security-audit.test.mjs scripts/relay.test.mjs scripts/flop-status.test.mjs scripts/verify-flop-observatory.test.mjs scripts/ui-i18n.test.mjs"
   }
 }

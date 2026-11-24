@@ -104,6 +104,15 @@ async function inventory(page, name) {
   assert.deepEqual(items.filter(x => x.tag === "A" && (!x.href || /^(javascript|data):/i.test(x.href))), [], name + " unsafe/empty links");
 }
 async function ready(page, selector) { await page.locator(selector).first().waitFor({ state: "visible", timeout: 30000 }); }
+async function createMockedContribution(page, locale) {
+  await page.locator("#clink").fill("https://github.com/maho0638/reddragon-technocore");
+  await page.locator("#ctitle").fill("Ephemeral browser audit contribution");
+  await page.locator("#contribBtn").click();
+  await page.waitForFunction(language => {
+    const text = document.querySelector("#contribOut")?.textContent || "";
+    return language === "en" ? /Signed contribution.*seq\s+\d+/i.test(text) : /İmzalı katkı.*sıra\s+\d+/i.test(text);
+  }, locale);
+}
 async function restoreDownloadedBackup(page, backupPath, backupName, password) {
   assert.match(backupName, /\.json$/i, "encrypted identity backup must retain its .json filename");
   const backupContents = await readFile(backupPath);
@@ -303,6 +312,9 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.equal(await restoreDownloadedBackup(page, backupPath, backup.suggestedFilename(), "ephemeral-ui-audit-only-password"), "Enter the backup password:");
     await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "English reload restores the same DID from the encrypted backup");
+    const beforeEnglishContribution = signedPosts.length;
+    await createMockedContribution(page, "en");
+    assertSignedPostMatchesDid(signedPosts[beforeEnglishContribution], generatedDid);
     await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     const unexpectedPopups = [];
     const pageCountBeforeShare = context.pages().length;
@@ -323,6 +335,9 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.equal(await restoreDownloadedBackup(page, backupPath, backup.suggestedFilename(), "ephemeral-ui-audit-only-password"), "Yedek parolasını gir:");
     await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "Turkish reload restores the same DID from the encrypted backup");
+    const beforeTurkishContribution = signedPosts.length;
+    await createMockedContribution(page, "tr");
+    assertSignedPostMatchesDid(signedPosts[beforeTurkishContribution], generatedDid);
     await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     await page.locator("#xShare").click();
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes("Technocore ajan kimliğimi oluşturdum"));

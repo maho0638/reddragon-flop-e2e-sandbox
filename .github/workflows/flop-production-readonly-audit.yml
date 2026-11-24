@@ -36,7 +36,7 @@ jobs:
           echo "SOURCE_BASE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
           echo "AUDIT_CANDIDATE=$(git rev-parse HEAD)"
           sha256sum --check <<'SHA256'
-          e39b8b8747072ebacff7d2d3800525090a83f74e2673850111fd2a03cecde1c5  scripts/browser/production-readonly-audit.mjs
+          b07c0fc51cba3ebdc6158a5b555dc3681bf1cc4f8b2a0e98bd7c8a8a32a346d4  scripts/browser/production-readonly-audit.mjs
           SHA256
       - name: Install pinned Playwright runtime
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

@@ -16,7 +16,7 @@ const sizes = [
 ];
 const readOnlyRelayActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
 const checks = [];
-const signals = { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [], blockedWrites: [] };
+const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], failedRequests: [], badResponses: [], blockedWrites: [] };
 
 function recordCheck(name, detail) {
   checks.push({ name, ...detail });
@@ -27,7 +27,7 @@ function assertLocalized(result, route, locale) {
   assert.equal(result.lang, locale, `${route}/${locale}: document language`);
   assert.ok(result.clientWidth > 0, `${route}/${locale}: page must have a layout viewport`);
   assert.ok(result.scrollWidth <= result.clientWidth + 1, `${route}/${locale}: horizontal overflow ${JSON.stringify(result.overflow)}`);
-  assert.deepEqual(result.invalidLinks, [], `${route}/${locale}: empty or unsafe link targets`);
+  assert.deepEqual(result.invalidLinks, [], `${route}/${locale}: unsafe link targets`);
   if (locale === "en") {
     assert.deepEqual(result.turkishCharacters, [], `${route}/${locale}: Turkish characters remain in English UI`);
   } else {
@@ -52,7 +52,7 @@ async function inspect(page, route, locale, size, checkInternalLinks) {
       href: a.getAttribute("href"), target: a.getAttribute("target"), rel: a.getAttribute("rel") || "", text: (a.innerText || "").trim().slice(0, 80)
     }));
     const invalidLinks = links.filter(link => !link.href || /^(javascript|data):/i.test(link.href) ||
-      (link.target === "_blank" && !/(^|\s)noopener(\s|$)/i.test(link.rel)));
+      (link.target === "_blank" && !/(^|\s)(noopener|noreferrer)(\s|$)/i.test(link.rel)));
     const internalPaths = [...new Set(links.map(link => link.href).filter(href => href?.startsWith("/") && !href.startsWith("//")).map(href => href.split(/[?#]/)[0] || "/"))];
     const trChars = locale === "en" ? [...new Set(copy.match(/[çğıöşüİ]/gi) || [])] : [];
     const untranslatedEnglish = locale === "tr" ? /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify|official timeline and reward faq|yellow paper file history|windowed messages across the returned room page|last successful\/attempted refresh|the current source status is published|read-only rpc check|public testnet)\b/i.exec(copy)?.[0] || null : null;
@@ -141,7 +141,10 @@ try {
     return route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "production audit blocks API writes" }) });
   });
   const page = await context.newPage();
-  page.on("console", message => { if (message.type() === "error") signals.consoleErrors.push({ url: page.url(), text: message.text() }); });
+  await page.addInitScript(() => addEventListener("securitypolicyviolation", event => {
+    (window.__rdCspViolations ||= []).push({ directive: event.effectiveDirective, blockedURI: event.blockedURI, sourceFile: event.sourceFile, lineNumber: event.lineNumber });
+  }));
+  page.on("console", message => { if (message.type() === "error") signals.consoleErrors.push({ url: page.url(), text: message.text(), location: message.location() }); });
   page.on("pageerror", error => signals.pageErrors.push({ url: page.url(), text: error.message }));
   page.on("requestfailed", request => signals.failedRequests.push({ url: request.url(), error: request.failure()?.errorText || "unknown" }));
   page.on("response", response => { if (response.status() >= 400) signals.badResponses.push({ status: response.status(), url: response.url() }); });
@@ -188,6 +191,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("#flop-live-status").waitFor({ state: "visible" });
   assert.equal(await page.locator("#rdFlopLanguage").inputValue(), "tr", "Turkish language must persist after reload");
+  signals.cspViolations = await page.evaluate(() => window.__rdCspViolations || []);
   await context.close();
 
   const firstPartyErrors = signals.consoleErrors.filter(item => item.url.startsWith(origin.origin));

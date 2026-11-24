@@ -37,6 +37,7 @@ jobs:
           echo "PRODUCTION_BASE=c56ba4ee45aafcf934acd369f7832656bf6da2ef"
           echo "SANDBOX_FIX_PARENT=1f0a678aa68e42f2c20a2498abf1c33b431c47bb"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
+          echo "MAIN_SOURCE_CANDIDATE=671aa411dda36b1d078585bcc43bf59b9c685f20"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
           a67e6a56e35aa5a1946843d74920dae46c86826631b17110a57a53b50ee6828c  api/flop-status.js
@@ -68,7 +69,7 @@ jobs:
           d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
           1f6d6f76d5228cb4dd2b1c3b5ff004565fc10e77c124a857c21345201d5b7598  public/language-safe.js
           004196845357912f522fe55796ce1011a8beb7342efb95d89438c95e2f73a561  public/language-stable.css
-          e2760592a1b311bd548cd10a31e1eda2e30358be925cff85623c270d1a3d65f8  public/language-stable.js
+          8831e030194512d8d9b210e3e07cf0693c8c9568eb457a1c580bb5e10714295d  public/language-stable.js
           cb3dd30f5dd7b2a6054ec2260018d2e43daece5ff7de428b2d70cacfe2f27dac  public/language.js
           a4db72c11f8ee57348af27d7e391eb013d5564d21ef1c3683a4d784d6941db67  public/live-observatory.css
           e95b0c153ca2f26117585c64bb3d00d493d5fddf570494ec67d3f85bd6b101c0  public/live-observatory.js
@@ -96,7 +97,7 @@ jobs:
           f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
           56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          c0292cf832e58eab7212ae2f07426f750a46d55da025c5ee6f7b7ab6686b6b6c  scripts/ui-i18n.test.mjs
+          989c0b5dd9b95fa50c439c7f86b003374db4486a62f6e80b87a83ea5ceff6d94  scripts/ui-i18n.test.mjs
           fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
           SHA256
       - name: Install pinned Playwright package

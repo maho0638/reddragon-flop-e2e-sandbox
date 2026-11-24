@@ -17,7 +17,7 @@ const sizes = [
 const readOnlyRelayActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
 const checks = [];
 const checkFailures = [];
-const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], failedRequests: [], badResponses: [], blockedWrites: [] };
+const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], blockedWrites: [] };
 
 function recordCheck(name, detail) {
   checks.push({ name, ...detail });
@@ -144,12 +144,17 @@ try {
     return route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "production audit blocks API writes" }) });
   });
   const page = await context.newPage();
+  let languageNavigation = false;
   await page.addInitScript(() => addEventListener("securitypolicyviolation", event => {
     (window.__rdCspViolations ||= []).push({ directive: event.effectiveDirective, blockedURI: event.blockedURI, sourceFile: event.sourceFile, lineNumber: event.lineNumber });
   }));
   page.on("console", message => { if (message.type() === "error") signals.consoleErrors.push({ url: page.url(), text: message.text(), location: message.location() }); });
   page.on("pageerror", error => signals.pageErrors.push({ url: page.url(), text: error.message }));
-  page.on("requestfailed", request => signals.failedRequests.push({ url: request.url(), error: request.failure()?.errorText || "unknown" }));
+  page.on("requestfailed", request => {
+    const item = { url: request.url(), error: request.failure()?.errorText || "unknown" };
+    if (languageNavigation && item.error === "net::ERR_ABORTED") signals.intentionalNavigationCancellations.push(item);
+    else signals.failedRequests.push(item);
+  });
   page.on("response", response => { if (response.status() >= 400) signals.badResponses.push({ status: response.status(), url: response.url() }); });
   page.setDefaultTimeout(20000);
 
@@ -161,8 +166,14 @@ try {
   for (const size of sizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
     for (const locale of ["en", "tr"]) {
-      await page.locator(`#rdLangSwitcher button[data-lang='${locale}']`).click();
-      await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+      languageNavigation = true;
+      try {
+        await page.locator(`#rdLangSwitcher button[data-lang='${locale}']`).click();
+        await page.waitForLoadState("domcontentloaded");
+        await page.locator("#createBtn").waitFor({ state: "attached" });
+        await page.waitForFunction(({ locale, expected }) => document.documentElement.lang === locale && document.querySelector("#createBtn")?.textContent.trim() === expected,
+          { locale, expected: locale === "en" ? "Create new DID" : "Yeni DID oluştur" });
+      } finally { languageNavigation = false; }
       try { await inspect(page, "home", locale, size, size.width === 1440 && locale === "en"); }
       catch (error) { const item = { route: "home", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
     }
@@ -182,20 +193,28 @@ try {
   for (const size of sizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
     for (const locale of ["tr", "en"]) {
-      await page.locator("#rdFlopLanguage").selectOption(locale);
-      await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+      languageNavigation = true;
+      try {
+        await page.locator("#rdFlopLanguage").selectOption(locale);
+        await page.waitForLoadState("domcontentloaded");
+        await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+      } finally { languageNavigation = false; }
       try { await inspect(page, "flop", locale, size, size.width === 1440 && locale === "tr"); }
       catch (error) { const item = { route: "flop", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
     }
   }
+  languageNavigation = true;
   await page.locator("#rdFlopLanguage").selectOption("en");
+  await page.waitForLoadState("domcontentloaded");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("#flop-live-status").waitFor({ state: "visible" });
   assert.equal(await page.locator("#rdFlopLanguage").inputValue(), "en", "English language must persist after reload");
   await page.locator("#rdFlopLanguage").selectOption("tr");
+  await page.waitForLoadState("domcontentloaded");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("#flop-live-status").waitFor({ state: "visible" });
   assert.equal(await page.locator("#rdFlopLanguage").inputValue(), "tr", "Turkish language must persist after reload");
+  languageNavigation = false;
   signals.cspViolations = await page.evaluate(() => window.__rdCspViolations || []);
   await context.close();
 

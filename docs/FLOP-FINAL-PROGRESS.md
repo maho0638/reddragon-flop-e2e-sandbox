@@ -66,3 +66,14 @@ Updated: 2026-11-25 (Europe/Istanbul)
 - Official pricing checked 2026-11-25: Vercel WAF rate limiting has 1M included allowed requests on Hobby, then $0.50 per million (region dependent), one rule per Hobby project, IP/JA4 counting, fixed windows 10s–10min. It can provide shared edge IP limiting but cannot meet zero-budget assurance for unbounded overage or DID-keyed limits. Upstash Free currently lists 250 MB and 500K commands/month, then a card-backed upgrade switches resources to pay-as-you-go; no Upstash account/database/credentials were created.
 - Result: distributed quota remains **unresolved / medium risk**. No code claims cross-instance protection. A real shared store is not connected, and mock multi-instance tests alone would not prove a live distributed limit. The public `topic/profile` overwrite surface needs an ownership-compatible protocol decision before tightening it without breaking existing clients.
 - No rate-limit implementation or relay client change was made in this phase.
+
+
+## Phase 3 implementation checkpoint — local candidate only
+
+- Clean candidate base: main/production source `aba62f91fc6ae0fbdb6cb141fd1d8f8345238710`; no commit, push, PR, merge, or deployment was made.
+- Local candidate adds Ed25519 authorization for RedDragon `profile/<fingerprint>` writes: signature covers UTF-8 `profile|<fingerprint>|<nonce>|<normalized-value>`; relay verifies key-derived DID fingerprint and signature before upstream. Client signs with its existing in-memory Ed25519 identity. DID note writes remain deterministic/public; `topic` stays world-writable per Technocore's explicit protocol.
+- Added isolated negatives for unsigned profile overwrite, a different DID's profile key, and a modified signed value; valid signed profile and public topic compatibility remain covered. Browser acceptance captures the mock profile request and verifies its Ed25519 signature against the generated DID.
+- Added two-module-instance test: the same IP receives 10 write attempts in each isolated counter before both return 429 (20 aggregate attempts), evidencing that module-local counters do not share quota. This is a simulation of separate instances, not a deployed Vercel measurement.
+- Candidate verification after those changes: `npm test` 90/90; `npm run test:local-preview` 7/7; targeted relay + i18n + preview checks 37/37; `node --check` on modified JavaScript and `git diff --check` pass. All relay upstream tests use mocks.
+- Real Chromium was not retried locally because the previously observed socket permission denial remains the known environment blocker. The existing Actions run 45505440409 predates this profile-authorization change; it does not verify this new code.
+- Remaining gates: run the local-only Chromium suite on the candidate through the isolated sandbox CI with updated source manifest; resolve cost-safe shared quota choice; production read-only Chromium is still pending. No claim of production readiness is made.

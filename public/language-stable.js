@@ -285,6 +285,9 @@ function translateEnhancements(en) {
   text("#rdOpenActions", en ? "4 · Open / test Actions" : "4 · Actions'ı aç / test et");
   text("#copyAutoGuide", en ? "Copy quick setup checklist" : "Hızlı kurulum listesini kopyala");
   text("#repoBtn", en ? "Open GitHub repository" : "GitHub repo'yu aç");
+  html("#autoOut", en
+    ? 'Project files are ready: <code>.github/workflows/technocore-agent.yml</code> and <code>scripts/technocore-agent.mjs</code>.'
+    : 'Projede <code>.github/workflows/technocore-agent.yml</code> ve <code>scripts/technocore-agent.mjs</code> hazır.');
 
   const proof = $("#rdProofImport");
   if (proof) {

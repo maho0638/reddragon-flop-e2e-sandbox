@@ -9,6 +9,8 @@ const flopStatus = await readFile(new URL("../public/flop-live-status.js", impor
 const patches = await readFile(new URL("../public/patches.js", import.meta.url), "utf8");
 const enhancements = await readFile(new URL("../public/enhancements.js", import.meta.url), "utf8");
 const languageStable = await readFile(new URL("../public/language-stable.js", import.meta.url), "utf8");
+const finalFixes = await readFile(new URL("../public/final-fixes.js", import.meta.url), "utf8");
+const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const config = await readFile(new URL("../public/config.js", import.meta.url), "utf8");
 const proofImport = await readFile(new URL("../public/proof-import.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
@@ -105,6 +107,14 @@ test("TR/EN visible labels and dynamic live copy use the selected locale", () =>
   assert.match(flopStatus, /setAttribute\("aria-label", lang === "tr" \? "Arayüz dili" : "Language"\)/);
   assert.match(flopStatus, /Topluluk çalışması · kaynak odaklı · resmî bağlantı iddiası yok/);
   assert.match(languageStable, /localStorage\.setItem\(LANG_KEY, next\)[\s\S]*location\.reload\(\)/);
+});
+
+test("English setup readiness is translated and usage guide styling stays within strict CSP", () => {
+  assert.match(languageStable, /html\("#autoOut", en[\s\S]*?Project files are ready/);
+  assert.match(languageStable, /Projede <code>\.github\/workflows\/technocore-agent\.yml<\/code>/);
+  assert.doesNotMatch(finalFixes, /ensureUsageGuideStyles|document\.createElement\(["']style["']\)/);
+  assert.match(styles, /#rdUsageGuide \.rd-guide-kicker/);
+  assert.match(styles, /#rdUsageGuide \.rd-guide-danger/);
 });
 
 test("X proof button copies locally while explicit share intents stay localized", () => {

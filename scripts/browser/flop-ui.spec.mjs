@@ -116,14 +116,17 @@ async function assertVisibleCopyLocale(page, locale, label, { home = false } = {
     proofImport: "Import Public Proof JSON",
     repository: "Open GitHub repository",
     share: "𝕏 Share this site",
-    heading: "Share · everyone uses their own account"
+    heading: "Share · everyone uses their own account",
+    readiness: "Project files are ready: .github/workflows/technocore-agent.yml and scripts/technocore-agent.mjs."
   } : {
     proofImport: "Herkese Açık Kanıt JSON'unu içe aktar",
     repository: "GitHub repo'yu aç",
     share: "𝕏 Siteyi paylaş",
-    heading: "Paylaş · herkes kendi hesabından"
+    heading: "Paylaş · herkes kendi hesabından",
+    readiness: "Projede .github/workflows/technocore-agent.yml ve scripts/technocore-agent.mjs hazır."
   };
   assert.equal((await page.locator("#rdProofImport button").first().textContent()).trim(), expected.proofImport, `${label}: public-proof action locale`);
+  assert.equal((await page.locator("#autoOut").innerText()).replace(/\s+/g, " ").trim(), expected.readiness, `${label}: GitHub readiness locale`);
   assert.equal((await page.locator("#repoBtn").textContent()).trim(), expected.repository, `${label}: GitHub action locale`);
   assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.share, `${label}: social share locale`);
   assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.heading, `${label}: share panel locale`);

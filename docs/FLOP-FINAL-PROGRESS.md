@@ -1,6 +1,6 @@
 # RedDragon FLOP — Final Completion Progress
 
-Updated: 2026-11-24 (Europe/Istanbul)
+Updated: 2026-11-25 (Europe/Istanbul)
 
 ## Verified release checkpoint
 
@@ -13,7 +13,7 @@ Updated: 2026-11-24 (Europe/Istanbul)
 ## Recovery checkpoint
 
 - The available local main checkout is stale at `c56ba4ee45aafcf934acd369f7832656bf6da2ef` and contains 27 modified tracked files plus 4 untracked source/test files. It has not been reset or overwritten. Its local changes must not be considered tested against current production source until reconciled.
-- Remote sandbox QA source checkpoint for this remediation: `5a8a017afe490b14939d7d0c9af5a206918e332a`; shared production source paths were compared by Git blob SHA against main `aba62f...` and matched. Sandbox-only README, package manifest, test file and workflow are intentionally different.
+- Current sandbox QA checkpoint: `87acd7d27ccdd829925a331c5dd9c7ef0c091252`; it is isolated from the main repository. Shared site files in the sandbox candidate were checked against main `aba62f...`; sandbox-only workflow/package/test files remain separate.
 - Sandbox repository Vercel lookup returned zero connected projects. The only existing sandbox workflow listens for changes to `.github/workflows/flop-site-browser-audit.yml`; the production audit uses a separate workflow path.
 
 ## Phase log
@@ -21,9 +21,9 @@ Updated: 2026-11-24 (Europe/Istanbul)
 | Phase | Scope | Status | Command / evidence | Next action |
 |---|---|---|---|---|
 | 0 | Verify current source and keep prior local work | PASS | GitHub `main` branch API confirms `aba62f...`; existing local checkout left untouched. | Continue against verified production and sandbox references. |
-| 1 | Production read-only Chromium acceptance: home and `/flop`, 320/390/768/1440, TR/EN, console/network and links | FAIL — CSP violation confirmed; home audit sync needs correction | Runs `45488127913`, `45489343811`, `45489952975`, `45490542505`. Run 4: all 8 `/flop` locale/viewport entries passed. Home audit sampled dynamic content before add-ons/stylesheets settled. Independent local Chromium E2E at `45492723838` rendered final `#autoOut` correctly in English, so the Turkish `#autoOut` finding is a timing false positive, not a confirmed persistent UI defect. The inline `<style>` CSP violation at `public/final-fixes.js:52` remains confirmed. | Finish sandbox E2E, then correct production audit waits for final text, all add-ons and CSS before post-release checks. |
-| 2 | Isolated synthetic DID, encrypted backup/restore and negative cases | NOT STARTED | Existing sandbox E2E covered creation, JSON backup and same-DID restore; security regressions were previously 42/42. Need confirm wrong password, malformed backup, key mismatch and DID tampering coverage/results. | Review security test evidence; run only missing negative cases in isolated preview. |
-| 3 | Relay shared rate-limit assessment | NOT STARTED | Known concern: memory counter may be per serverless instance. No change proposed or activated. | Inspect deployed `api/relay.js`, prove practical scope, research official Vercel shared-storage options and cost. |
+| 1 | Production read-only Chromium acceptance: home and `/flop`, 320/390/768/1440, TR/EN, console/network and links | NOT ACCEPTED — production still has a confirmed CSP violation; browser audit harness needs final synchronization | Production audit runs `45488127913`, `45489343811`, `45489952975`, `45490542505` failed or stopped early. All `/flop` locale/viewport checks passed in run 4; homepage checks did not finish because the harness read dynamic content before add-ons/stylesheets settled. Sandbox run `45495345948` verifies fixed CSS in the local candidate only; no production change yet. Earlier Turkish `#autoOut` finding was a timing false positive; final English text is localized. | Finish the audit harness, then run production acceptance after the validated release; do not treat sandbox E2E as production proof. |
+| 2 | Isolated synthetic DID, encrypted backup/restore and negative cases | PASS — sandbox candidate | Actions `45495345948`: security regressions 43/43; Chromium 12/12, 0 failed, 0 skipped. Logs show Ed25519 DID/signature verification, `.json` backup download, correct restore, wrong-password rejection, corrupted JSON/ciphertext rejection, public-key/DID/fingerprint tampering rejection, and same DID after restore. E2E used synthetic identity and mocked relay; no secrets or real writes. | Keep this passing coverage and rerun it only if relay/DID code changes. |
+| 3 | Relay shared rate-limit assessment | CONFIRMED LIMITATION; implementation pending | `api/relay.js` stores counters in a module-level `Map` (60 reads / 10 writes per IP per minute per warm instance). Vercel documents automatic scaling/reuse across isolated function instances, so the code cannot provide shared quotas. Official options: Upstash Redis Free (250 MB, 500K commands/month; fixed-window limiter needs about 2–3 commands per allowed request), or Vercel WAF (counters are per-region; paid usage begins after included quota). No provider is connected to this project and no paid service was created. | Implement a shared-store adapter with mock/concurrency/fail-closed tests. Free Redis provisioning/credentials must be connected before production can rely on it. |
 | 4 | Current official FLOP Testnet readiness | NOT STARTED | Prior sources have conflicting status wording. No faucet claim, signature, inference, voucher or chain write performed. | Recheck official pages and use read-only RPC/genesis verification if a supported method is available. |
 | 5 | Final regressions and release decision | NOT STARTED | Current production SHA is already READY. Avoid another deployment unless code changes and all gates pass. | Apply only verified necessary fixes; rerun affected tests before any further release. |
 
@@ -37,15 +37,22 @@ Updated: 2026-11-24 (Europe/Istanbul)
 
 ## Latest sandbox candidate run
 
-- Candidate commit: e53c959f5b848cc1221d91e8ad04f7246e351f03; Actions run 45492723838 on sandbox QA, with isolated local preview and mocked relay.
-- SHA-256 source manifest passed. Focused security/localization regressions: 43/43 passed. Local preview HTTP checks: 7/7 passed. Chromium: 11/12 passed, 0 skipped. The sole failure was a stale expected value for #autoOut: the app correctly rendered its final localized “Fork-safe agent…” text, while the test expected an earlier “Project files…” string. This is a test expectation defect; no app behavior failure was established by that assertion.
-- The Chromium run did not reach the new computed-style assertion because it stopped at the stale copy assertion. A follow-up now expects the rendered final TR/EN text and waits for the visible usage guide before asserting external CSS computes as 1px solid. The test is not green yet; one new isolated Actions run is required.
-- Before the next push, the isolated candidate copy passed node --test scripts/ui-i18n.test.mjs (14/14), npm run test:security-regressions (43/43), npm run test:local-preview (7/7), Node syntax checks, and git diff --no-index --check for all seven changed files. The browser suite has not yet been rerun on the follow-up candidate.
+- Prior candidate `e53c959f5b848cc1221d91e8ad04f7246e351f03` / run `45492723838` had 11/12 Chromium tests because the test expected an intermediate `#autoOut` value.
+- Follow-up commit `87acd7d27ccdd829925a331c5dd9c7ef0c091252` / run `45495345948` passed: SHA-256 manifest, local preview 7/7, security regressions 43/43, Chromium 12/12, 0 failed, 0 skipped. It tested local preview on 127.0.0.1 with mock relay and synthetic DID, not production.
+- The corrected test waits for the final localized status and visible usage guide before checking computed external CSS (`1px solid`); X share clipboard checks, no-popup guard, TR/EN and all four widths passed.
 
 ## Current blockers
 
-- Production browser acceptance remains incomplete. The prior audit confirmed a CSP violation because public/final-fixes.js injected runtime style under strict style-src 'self'. The candidate moves these rules to public/styles.css and adds a computed-style check while keeping CSP strict; production itself has not changed.
-- The earlier English #autoOut alarm was an audit timing false positive: sandbox Chromium confirms the final value is localized after late UI initialization. Production audit still needs to wait for final UI/add-ons/stylesheets before counting the complete matrix.
-- One early run showed a 404 at /api/relay; later runs did not reproduce it, and direct GET returned 405. Latest browser run showed no HTTP 4xx/5xx. Intentional navigation cancellations are reported separately.
-- FLOP official Testnet/faucet/runtime status needs a fresh, source-by-source check due conflicting official pages.
-- Do not claim shared rate limiting until multi-instance behavior is tested; the current risk remains at least medium until then.
+- Production browser acceptance remains incomplete. The production audit harness must wait for the final UI, proof-import add-on, and stylesheets; sandbox E2E is not production proof.
+- Production still has a CSP violation: deployed final-fixes.js injects a runtime style under style-src 'self'. The sandbox candidate has removed that injection and verifies computed external CSS while leaving CSP strict; it is not deployed.
+- The in-memory relay quota is per warm function instance and can multiply across instances. Severity remains medium until the shared store is connected and verified.
+- The first /api/relay 404 was not reproduced; direct GET returns expected 405. Latest sandbox run has no failed HTTP statuses.
+- FLOP Testnet/faucet/runtime status still needs a fresh, source-by-source check before any readiness claim.
+
+## Official rate-limit references
+
+- Vercel Functions lifecycle and instance reuse/scaling: https://vercel.com/docs/functions
+- Vercel Redis options (Vercel KV is no longer available for new projects): https://vercel.com/docs/redis
+- Vercel WAF regional rate-limit counters and usage pricing: https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting
+- Upstash Redis Free plan and quotas: https://upstash.com/pricing/redis
+- Upstash rate-limit command costs: https://upstash.com/docs/redis/sdks/ratelimit-ts/costs

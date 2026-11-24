@@ -35,7 +35,7 @@ jobs:
       - name: Verify isolated FLOP source SHA-256 manifest
         run: |
           echo "SOURCE_FIX_COMMIT=cf70bfc463d6a7b44e273c92ec80602f92d9248b"
-          echo "SANDBOX_FIX_PARENT=055739826c067ea9b148d38c359df35b0fcba145"
+          echo "SANDBOX_FIX_PARENT=9014b27b55291f9e27cfe5376f4db54905d7b21e"
           echo "SANDBOX_TEST_CANDIDATE=$(git rev-parse HEAD)"
           sha256sum --check <<'SHA256'
           5e67694a4eb587ad81d2fce3a115dce08fa0487190dddf6c9df0b6eb2d1a67c0  README.md
@@ -91,7 +91,7 @@ jobs:
           b51d4afa9b2530a4515b3366fe1d7bf1c7bb832ec0fef1c209adca333c0db609  public/testnet-toolkit.js
           d671bc6ede6296f3c4f208857872c4fdfbaf1b134ac5239abd1513d0a2d8aef9  public/ui-i18n.js
           22acc2cba4679fe7116cfbcdde44179ecc9561be62416102b3996771bc7fb7f3  scripts/browser/flop-ui.spec.mjs
-          55ed91841e9de70f79fbc6e42e818a3bb9ba5bc0b02130d5224d234890e21d38  scripts/browser/site-acceptance.spec.mjs
+          15735d7c6b221e06f355d897be394d7c3f44fcd64e1df8e29102c25f1c75c823  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
           2f0316d3f32dda2d5fb76c461e13e76fbd05399c430e5dcbb56cb0672bc6d0a9  scripts/local-preview-http-smoke.mjs
           6c3346bae6f28b45a548c7c31ac5508e8e1894d0a5bf32e71ab6bec4686bf799  scripts/local-preview-server.mjs

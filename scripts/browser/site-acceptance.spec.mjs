@@ -326,7 +326,9 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     await page.locator("#rdLangSwitcher button[data-lang='en']").click();
     await enNavigation;
     await page.waitForFunction(() => document.documentElement.lang === "en");
-    assert.equal((await page.locator("#vaultDid").textContent()).trim(), generatedDid, "English reload preserves the same DID");
+    assert.equal(await restoreDownloadedBackup(page, backupPath, backup.suggestedFilename(), "ephemeral-ui-audit-only-password"), "Enter the backup password:");
+    await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "English locale reload restores the same DID from its encrypted backup");
     await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     const unexpectedPopups = [];
     page.on("popup", popup => unexpectedPopups.push(popup));
@@ -343,7 +345,9 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     await page.locator("#rdLangSwitcher button[data-lang='tr']").click();
     await trNavigation;
     await page.waitForFunction(() => document.documentElement.lang === "tr");
-    assert.equal((await page.locator("#vaultDid").textContent()).trim(), generatedDid, "Turkish reload preserves the same DID");
+    assert.equal(await restoreDownloadedBackup(page, backupPath, backup.suggestedFilename(), "ephemeral-ui-audit-only-password"), "Yedek parolasını gir:");
+    await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "Turkish locale reload restores the same DID from its encrypted backup");
     await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     await page.locator("#xShare").click();
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes("Technocore ajan kimliğimi oluşturdum"));

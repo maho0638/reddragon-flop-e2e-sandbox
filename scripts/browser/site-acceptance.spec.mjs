@@ -308,9 +308,26 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.match((await proofDownloadEvent).suggestedFilename(), /reddragon-proof-.*\.json/);testedActions++;
     await page.locator("#copyProof").click();
     assert.match(await page.evaluate(() => navigator.clipboard.readText()), /"did":\s*"did:key:z6Mk/);testedActions++;
+    // The contribution receipt is captured asynchronously from the mocked relay.
+    // Confirm it is durably stored before reloading for a locale change.
+    await page.waitForFunction((did) => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key?.startsWith("reddragon-public-state-v1:")) continue;
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || "null");
+          const record = saved?.proof?.contribution?.record;
+          if (saved?.did === did && record?.did === did && /^\d+$/.test(String(record.seq)) && Number(record.seq) > 0) return true;
+        } catch {}
+      }
+      return false;
+    }, generatedDid, { timeout: 15000 });
+    const enNavigation = page.waitForNavigation({ waitUntil: "domcontentloaded" });
     await page.locator("#rdLangSwitcher button[data-lang='en']").click();
+    await enNavigation;
     await page.waitForFunction(() => document.documentElement.lang === "en");
-    await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, {timeout: 5000});
+    assert.equal((await page.locator("#vaultDid").textContent()).trim(), generatedDid, "English reload preserves the same DID");
+    await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     const unexpectedPopups = [];
     page.on("popup", popup => unexpectedPopups.push(popup));
     const pageCountBeforeShare = context.pages().length;
@@ -322,8 +339,12 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.match(shareText, /#Technocore #FLOP/);
     assert.deepEqual(unexpectedPopups, [], "English share copies text without opening a popup");
     assert.equal(context.pages().length, pageCountBeforeShare, "English share must not create a new page");testedActions++;
+    const trNavigation = page.waitForNavigation({ waitUntil: "domcontentloaded" });
     await page.locator("#rdLangSwitcher button[data-lang='tr']").click();
+    await trNavigation;
     await page.waitForFunction(() => document.documentElement.lang === "tr");
+    assert.equal((await page.locator("#vaultDid").textContent()).trim(), generatedDid, "Turkish reload preserves the same DID");
+    await page.waitForFunction(() => !document.querySelector("#xShare")?.disabled, null, { timeout: 15000 });
     await page.locator("#xShare").click();
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes("Technocore ajan kimliğimi oluşturdum"));
     shareText = await page.evaluate(() => navigator.clipboard.readText());

@@ -58,7 +58,7 @@ jobs:
           2e5c60f68301389013700e025fd4efeada1293c7b3d1d0b20df22faec1afdb1c  public/enhancements.js
           944640fd724d2bbb846c8f9ace4af29e2282909f39c123f6c4ce10c5bd091a48  public/final-fixes.js
           307099f92e0f5497e78a542f457c44afa9bb9310d5780b6c6744b571ccd6d531  public/flop-did-utils.js
-          e7047ba1f135a2e327c1cfdd7d3fdf16daf6e29618fa86cc662cde8eaea3e19c  public/flop-live-status.js
+          53e279a37827f7101c741f58ad75ee7282a4200cbcdb9ffdd6718f0563bb241e  public/flop-live-status.js
           afb147a61c1b6bb64eaf2be6d20da883b1db6e708723e7b906edd84e74858828  public/flop-responsive-fixes.css
           acf724bea3d788c617d8613a6e99a70c8868d575f333c7b5d795fe4e3f53b033  public/flop-source-status.json
           edbd04f2f9feb69fc7e397700d9f43e5a6d35784fcc7fa07d60693c0384da5c2  public/flop-spec-refresh.js
@@ -97,7 +97,7 @@ jobs:
           f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
           56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs
           65baa5c8ba9724db46e25d82890bc020b6ef892db9312a373b4b5369244cd814  scripts/relay-security-audit.test.mjs
-          6f6b35d00df5ec315baf3360c3a6b6f46c6e0dae00184a9d236ee44b9b6a875c  scripts/ui-i18n.test.mjs
+          a1c044c9f8a5a7f5ae6bc6f070a7d2d7bb2a04f5549ec2ba32536ad6ee0a1ed4  scripts/ui-i18n.test.mjs
           fdbe9f6e8dacee02a0e67be0b47e81d46922ecf3c85b2842a0f092035f4774d8  scripts/run-local-browser-acceptance.mjs
           SHA256
       - name: Install pinned Playwright package

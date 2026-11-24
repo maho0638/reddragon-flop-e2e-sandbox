@@ -85,6 +85,8 @@ function renderStatic(lang) {
     const span = card.querySelector("span"); const h = card.querySelector("h2"); const p = card.querySelector("p"); const a = card.querySelector("a");
     if (span) span.textContent = item[0]; if (h && i !== 2) h.textContent = item[1]; if (p && i !== 2) p.textContent = item[2]; if (a && i !== 2) a.textContent = item[3];
   });
+  const paperHistoryLink = document.querySelectorAll(".status-grid .status-card")[2]?.querySelector("a");
+  if (paperHistoryLink) paperHistoryLink.textContent = lang === "tr" ? "Yellow Paper dosya geçmişi →" : "Yellow Paper file history →";
   const devnetCard = document.querySelectorAll(".status-grid .status-card")[8];
   const devnetLinks = devnetCard?.querySelectorAll("a");
   if (devnetLinks?.[1]) devnetLinks[1].textContent = lang === "tr" ? "Resmî zaman çizelgesi ve ödül SSS'si →" : "Official timeline and reward FAQ →";

@@ -79,6 +79,7 @@ test("onboarding and proof-import UI copy uses shared translations in both langu
 test("TR/EN visible labels and dynamic live copy use the selected locale", () => {
   assert.match(languageStable, /text\("#copyDidSecret", en \? "Copy" : "Kopyala"\)/);
   assert.match(flopStatus, /HALKA AÇIK TESTNET/);
+  assert.match(flopStatus, /Yellow Paper dosya geçmişi →/);
   assert.match(flopStatus, /p:not\(\.kicker\)/);
   assert.match(flopStatus, /Resmî teknik tanım ↗/);
   assert.match(capacity, /rdTcWindowLabel/);

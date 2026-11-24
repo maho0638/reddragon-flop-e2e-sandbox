@@ -1,0 +1,48 @@
+name: FLOP production read-only Chromium acceptance
+
+on:
+  push:
+    branches:
+      - qa/flop-e2e-9bbc626
+    paths:
+      - .github/workflows/flop-production-readonly-audit.yml
+      - scripts/browser/production-readonly-audit.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flop-production-readonly-audit
+  cancel-in-progress: false
+
+jobs:
+  production-readonly-audit:
+    if: github.ref == 'refs/heads/qa/flop-e2e-9bbc626' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify production audit source hash
+        run: |
+          echo "PRODUCTION_TARGET=https://reddragon-technocore.vercel.app"
+          echo "SOURCE_BASE=aba62f91fc6ae0fbdb6cb141fd1d8f8345238710"
+          echo "AUDIT_CANDIDATE=$(git rev-parse HEAD)"
+          sha256sum --check <<'SHA256'
+          e39b8b8747072ebacff7d2d3800525090a83f74e2673850111fd2a03cecde1c5  scripts/browser/production-readonly-audit.mjs
+          SHA256
+      - name: Install pinned Playwright runtime
+        run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1
+      - name: Install Chromium on the ephemeral runner
+        run: npx playwright install --with-deps chromium
+      - name: Run production read-only acceptance matrix
+        run: node scripts/browser/production-readonly-audit.mjs
+        env:
+          SITE_ACCEPTANCE_ORIGIN: https://reddragon-technocore.vercel.app

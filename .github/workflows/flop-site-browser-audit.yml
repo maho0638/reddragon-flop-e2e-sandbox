@@ -46,7 +46,7 @@ jobs:
           9945c501cc2439e13bd761796548fb8ab59becf76b5a67cb97dbdc991f258975  public/activity-proof.js
           9d08c13844b613284666a437c728e1bdda7101d5993ac63bcd803638eb3677e8  public/agent-field.css
           84f37a6630405cc0254d939ca3dad3ee2b18fd6ef867225136d7140fc36a6376  public/agent-field.js
-          fe9850990d4487f331e04b7323d5b3a62eb82fa05b3ac47e9782c9189001c14c  public/app.js
+          c25f4adac4e6ec68f765a4ecf135a16c91f98a3f1a12c8cd33395bd56dbb18e1  public/app.js
           a0fd7d3cb01cd349de100ce1d8bb056026d36471d68f391c35374b3eda7de43a  public/assets/reddragon.jpg
           367095779728296c9f9adabcc79d7eb0d005b5cc096df3eacf5695c54c37c608  public/community-positioning.js
           01457a6db1388beb2a016b0746ef945ecfea73ff1248c733711706e16381aca2  public/config.js
@@ -54,8 +54,8 @@ jobs:
           57c25d847c5535bfc0b3b413e1c99a877a60edf524c94a2e0880b8e60bcff14b  public/did-provenance.css
           ee359fea7b23d686af5303eb88f09a1712c34d3fffcb72761f972bea4ee24b70  public/did-provenance.js
           c1c76c95a213325242ef2ff76caf0682e45512ab9ad2bcd79d076b4300ea91f8  public/enhancements.css
-          32f588a0187989809234d8a6229537549cb97814eb39ca2fb8693b320ad39f98  public/enhancements.js
-          a145c0c5925601a35643bd8c0f09a8e1dcd8349bf550cabd17518e20b5b073fd  public/final-fixes.js
+          2e5c60f68301389013700e025fd4efeada1293c7b3d1d0b20df22faec1afdb1c  public/enhancements.js
+          944640fd724d2bbb846c8f9ace4af29e2282909f39c123f6c4ce10c5bd091a48  public/final-fixes.js
           307099f92e0f5497e78a542f457c44afa9bb9310d5780b6c6744b571ccd6d531  public/flop-did-utils.js
           91b53c0a10110c2404654dc26e28a9cf2ee443b9b7fffe06585c226a3cc945a2  public/flop-live-status.js
           afb147a61c1b6bb64eaf2be6d20da883b1db6e708723e7b906edd84e74858828  public/flop-responsive-fixes.css
@@ -63,7 +63,7 @@ jobs:
           edbd04f2f9feb69fc7e397700d9f43e5a6d35784fcc7fa07d60693c0384da5c2  public/flop-spec-refresh.js
           69fb10422e5548154a5772bcb32ac0ce11110f22a0f4b9a2d0e3b9e55ff8415d  public/flop.css
           4b6782df515aa3407055a7a4927deffff397f80de03e0472e33225c85010cfe4  public/flop.html
-          aaaecb3e414d1356c6759b0e714a70e65a1d083c5ddd147d8aad790006ccfe3f  public/index.html
+          c1c9741018193283436213effb29a7c567c45b8c04fe1f04a1b607b060d9aadc  public/index.html
           c93940db073182b505b8cfec841690f3a58948ee338ae316d3df916807769780  public/language-bootstrap.js
           d9a2e5ab978af39161fad09742353a33faeadbd9992b28ed5270d87e03d8818a  public/language-final.js
           1f6d6f76d5228cb4dd2b1c3b5ff004565fc10e77c124a857c21345201d5b7598  public/language-safe.js
@@ -89,9 +89,9 @@ jobs:
           6a4f59e867156df58efd64c6be227e12ea003087fc1d68c548784b7eb901a4c6  public/technocore-capacity.js
           b969a17949b3d5a6cbe9c74d0b8a71700e91d253b8c1951fbede952c06304487  public/testnet-toolkit.css
           24b123cf155995b6cff5fbf643ba98184f8c9d3cb3a99132ed1df64a8b507b91  public/testnet-toolkit.js
-          70bf1892c1136fe4f35a01c70d4a516600040e7d2b315423975e8345f87ac0a6  public/ui-i18n.js
-          2cc22aae8267ff0e9080f3898cc28bb57a2b114a87060ef6feb4a8d4c12efbba  scripts/browser/flop-ui.spec.mjs
-          29a1a23ebc0e5f3974dd818d806c3c5d3512d871c7b38997c19b4d62c0d92d63  scripts/browser/site-acceptance.spec.mjs
+          be53b83d0e309a65b9594214ab07328e34ff81cd3221cefc919acb1594b9bb3d  public/ui-i18n.js
+          e174c73b54449cf6363e9fb2b7e786a4a11683ee2df154ae82fd0f1dde4d41f6  scripts/browser/flop-ui.spec.mjs
+          b82eee8112b6b1071691bf68e84157a6128b084c260462a3cc0da00a205f86b1  scripts/browser/site-acceptance.spec.mjs
           ec120c22ae9bfbc7dba93ca0fce819bf7c32174752f79831bb54f6453ab3e56a  scripts/did-backup-restore.test.mjs
           f1bed1afb808cb4d20ad87283222dc04ea82c8d711108b52493f9c479433f265  scripts/local-preview-http-smoke.mjs
           56e7205f89a0d87cfefe9046440f23cbce82a53c97327f59ae33b46662783016  scripts/local-preview-server.mjs

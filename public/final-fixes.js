@@ -156,8 +156,8 @@ function fixQuickSetupOrder(isEn) {
   const warning = document.querySelector('[data-step="11"] .warning-box span');
   if (warning) {
     warning.textContent = isEn
-      ? "Primary and backup workflows run on staggered schedules. If GitHub delays one schedule, a later trigger can recover. Durable Technocore state keeps signed check-ins at least 12 hours apart."
-      : "Ana ve yedek workflow farklı dakikalarda çalışır. GitHub bir schedule'ı geciktirirse sonraki tetikleyici telafi edebilir. Technocore kalıcı kilidi signed check-in'leri en az 12 saat aralıklı tutar.";
+      ? "Primary and backup workflows run on staggered schedules. If GitHub delays one schedule, a later trigger can recover. Durable Technocore state keeps signed check-ins at least 12 hours apart. More frequent posts are not known to improve airdrop eligibility; FLOP Labs alone confirms eligibility criteria."
+      : "Ana ve yedek workflow farklı zamanlarda çalışır. GitHub bir zamanlamayı geciktirirse sonraki tetikleyici açığı kapatabilir. Technocore'daki kalıcı durum, imzalı check-in'ler arasında en az 12 saat bırakır. Daha sık gönderilerin airdrop uygunluğunu artırdığına dair kanıt yoktur; uygunluk ölçütlerini yalnızca FLOP Labs doğrulayabilir.";
   }
 
   const autoOut = document.querySelector("#autoOut");

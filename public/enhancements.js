@@ -131,15 +131,16 @@ function addTopLinks() {
 function addHeroSocial() {
   const host = $(".hero-actions");
   if (!host || $("#rdSocialStrip")) return;
+  const isEn = window.RD_I18N?.language() === "en";
   const strip = document.createElement("div");
   strip.id = "rdSocialStrip";
   strip.className = "rd-social-strip";
   strip.innerHTML = `
-    <button type="button" id="rdShareSiteX">𝕏 Siteden paylaş</button>
+    <button type="button" id="rdShareSiteX">${isEn ? "𝕏 Share this site" : "𝕏 Siteyi paylaş"}</button>
     <a href="${REPO_URL}" target="_blank" rel="noreferrer">★ GitHub</a>
     <a href="${REPO_URL}/fork" target="_blank" rel="noreferrer">⑂ Fork</a>
     <a href="${MEDIUM_URL}" target="_blank" rel="noreferrer">M Medium</a>
-    <a href="https://x.com/${X_USER}" target="_blank" rel="noreferrer">Takip et ${X_HANDLE}</a>`;
+    <a href="https://x.com/${X_USER}" target="_blank" rel="noreferrer">${isEn ? "Follow" : "Takip et"} ${X_HANDLE}</a>`;
   host.after(strip);
   $("#rdShareSiteX").onclick = () => xIntent(siteShareText());
 }
@@ -147,17 +148,18 @@ function addHeroSocial() {
 function upgradeProofShare() {
   const card = document.querySelector('[data-step="10"]');
   if (!card || $("#rdSharePanel")) return;
+  const isEn = window.RD_I18N?.language() === "en";
   const panel = document.createElement("div");
   panel.id = "rdSharePanel";
   panel.className = "rd-share-panel";
   panel.innerHTML = `
-    <h3>Paylaş · herkes kendi hesabından</h3>
-    <p>X metni panoya kopyalanır; istersen DID + proof düğmesi X paylaşım penceresini açar. Medium için yazıyı kopyalayıp kendi hesabında yayınlayabilirsin.</p>
+    <h3>${isEn ? "Share · everyone uses their own account" : "Paylaş · herkes kendi hesabından"}</h3>
+    <p>${isEn ? "The X text is copied to your clipboard; the DID + proof button opens the X composer. For Medium, copy the draft and publish it from your own account." : "X metni panoya kopyalanır; istersen DID + proof düğmesi X paylaşım penceresini açar. Medium için yazıyı kopyalayıp kendi hesabında yayınlayabilirsin."}</p>
     <div class="rd-share-grid">
-      <button type="button" id="rdProofX">𝕏 DID + proof paylaş</button>
-      <button type="button" id="rdThreadCopy">3 tweetlik diziyi kopyala</button>
-      <button type="button" id="rdMediumCopy">Medium yazısını kopyala</button>
-      <a href="${MEDIUM_WRITE_URL}" target="_blank" rel="noreferrer">Medium’da yeni yazı aç</a>
+      <button type="button" id="rdProofX">${isEn ? "𝕏 Share DID + proof" : "𝕏 DID + kanıt paylaş"}</button>
+      <button type="button" id="rdThreadCopy">${isEn ? "Copy 3-post thread" : "3 gönderilik diziyi kopyala"}</button>
+      <button type="button" id="rdMediumCopy">${isEn ? "Copy Medium draft" : "Medium taslağını kopyala"}</button>
+      <a href="${MEDIUM_WRITE_URL}" target="_blank" rel="noreferrer">${isEn ? "Open a new Medium story" : "Medium'da yeni yazı aç"}</a>
     </div>`;
   card.appendChild(panel);
   $("#rdProofX").onclick = () => xIntent(proofShareText());

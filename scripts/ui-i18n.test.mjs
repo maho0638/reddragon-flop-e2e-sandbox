@@ -97,6 +97,10 @@ test("X sharing copies localized text without a popup and proof intent remains a
     assert.ok(i18n.t("app.xShareDraft", { handle: "@example", did: "did:key:z6Mk-test", url: "https://example.test", room: "lobby", seq: "1" }, lang).includes("did:key:z6Mk-test"));
   }
   assert.match(enhancements, /window\.RD_I18N\.t\("app\.xShareDraft"/);
+  assert.match(enhancements, /const isEn = window\.RD_I18N\?\.language\(\) === "en"/);
+  for (const copy of ["Share · everyone uses their own account", "The X text is copied to your clipboard", "𝕏 Share this site", "Follow"]) assert.ok(enhancements.includes(copy), `missing English injected share copy: ${copy}`);
+  assert.ok(i18n.t("app.agentCadence", {}, "en").includes("More frequent posts are not known to improve airdrop eligibility"));
+  assert.ok(i18n.t("app.agentCadence", {}, "tr").includes("Daha sık gönderilerin airdrop uygunluğunu artırdığına dair kanıt yoktur"));
   assert.match(enhancements, /replacement\.onclick = \(\) => copy\(proofShareText\(\), window\.RD_I18N\.t\("app\.xTextCopied"\)\)/);
   assert.match(enhancements, /#rdProofX[\s\S]*xIntent\(proofShareText\(\)\)/);
   assert.match(siteAcceptance, /navigator\.clipboard\.readText\(\)/);

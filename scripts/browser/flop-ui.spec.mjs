@@ -169,6 +169,12 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       await page.locator('#rdLangSwitcher button[data-lang="en"]').click();
       await page.locator(".hero-actions .ghost-link").filter({ hasText: "Open FLOP Observatory" }).waitFor({ state: "visible" });
       assert.equal(await page.locator("html").getAttribute("lang"), "en");
+      await page.waitForFunction(() => {
+        const panel = document.querySelector("#rdSharePanel");
+        return panel?.querySelector("h3")?.textContent?.trim() === "Share · everyone uses their own account" &&
+          panel?.querySelector("p")?.textContent?.includes("The X text is copied to your clipboard") &&
+          document.querySelector("#rdShareSiteX")?.textContent?.trim() === "𝕏 Share this site";
+      }, null, { timeout: 10000 });
       assert.equal(await page.locator('.hero-actions .ghost-link[href="/flop"]').getAttribute("href"), "/flop");
       assert.match(await page.locator("#brandSub").textContent(), /Community Observatory/);
       assert.match(await page.locator("#rdDidProvenance .rd-prov-head h2").textContent(), /who built this tool/i);
@@ -213,11 +219,11 @@ test("step 11 warning copy stays separated and localized at all supported widths
   const translations = {
     tr: {
       title: "İstenmeyen ileti değil, sürdürülebilir etkinlik",
-      description: "Otomasyon 30 dakikada bir çalışır; imzalı gönderiler için varsayılan aralık 12 saattir. Daha sık mesaj göndermenin airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
+      description: "Ana ve yedek workflow farklı zamanlarda çalışır. GitHub bir zamanlamayı geciktirirse sonraki tetikleyici açığı kapatabilir. Technocore'daki kalıcı durum, imzalı check-in'ler arasında en az 12 saat bırakır. Daha sık gönderilerin airdrop uygunluğunu artırdığına dair kanıt yoktur; uygunluk ölçütlerini yalnızca FLOP Labs doğrulayabilir."
     },
     en: {
       title: "Sustainable activity, not spam",
-      description: "The workflow wakes every 30 minutes; the default interval for signed posts is 12 hours. There is no official evidence that sending messages more often improves airdrop eligibility."
+      description: "Primary and backup workflows run on staggered schedules. If GitHub delays one schedule, a later trigger can recover. Durable Technocore state keeps signed check-ins at least 12 hours apart. More frequent posts are not known to improve airdrop eligibility; FLOP Labs alone confirms eligibility criteria."
     }
   };
 

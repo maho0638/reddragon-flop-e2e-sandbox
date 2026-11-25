@@ -232,14 +232,18 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     }
     assert.match(restoreDialog.message(), /backup password|yedek parolasını/i);
     await restoreDialog.accept("ephemeral-ui-audit-only-password");
+    const expectedRestoreMessage = "Encrypted identity backup verified · DID + private key restored";
     try {
-      await page.waitForFunction(() => /Identity restored|Kimlik geri yüklendi|backup could not be opened|Yedek açılamadı/i.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 20000 });
+      await page.waitForFunction(({ success, failure }) => {
+        const toast = (document.querySelector("#toast")?.textContent || "").trim();
+        return toast === success || toast === failure;
+      }, { success: expectedRestoreMessage, failure: "The backup could not be opened or the password was incorrect." }, { timeout: 20000 });
     } catch (error) {
       const evidence = await page.evaluate(() => ({ language: document.documentElement.lang, toast: document.querySelector("#toast")?.textContent || "", identity: document.querySelector("#identityOut")?.textContent || "", inputFiles: document.querySelector("#restoreInput")?.files?.length || 0, inputName: document.querySelector("#restoreInput")?.files?.[0]?.name || "" }));
       assert.fail(`restore did not report success or rejection: ${JSON.stringify(evidence)}; page errors: ${JSON.stringify(errors)}; ${error.message}`);
     }
     const restoreMessage = (await page.locator("#toast").textContent()).trim();
-    assert.match(restoreMessage, /Identity restored|Kimlik geri yüklendi/, `encrypted restore must succeed, received: ${restoreMessage}`);
+    assert.equal(restoreMessage, expectedRestoreMessage, `encrypted restore must succeed, received: ${restoreMessage}`);
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID after keypair verification");testedActions++;
     await page.locator("#copyDidBtn").click();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), generatedDid);testedActions++;

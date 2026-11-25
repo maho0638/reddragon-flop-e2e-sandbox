@@ -29,7 +29,7 @@ jobs:
         run: |
           sha256sum --check <<'SHA256'
           bfa006337676118ec817e2850f64070dcea271d21170b130d8a329be5592a916  scripts/browser/production-readonly-audit.mjs
-          0710e4765bca3f639f7d6d0a74bcf0fb46d3a2797eb9916fbb105b2960cc3d4b  scripts/browser/csp-violation-gate.mjs
+          ff86986e6b043e07fb10eefde15075a7d59811e0dd7886a8d61d4b80d8932ee1  scripts/browser/csp-violation-gate.mjs
           SHA256
       - name: Install pinned Playwright runtime
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

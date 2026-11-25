@@ -178,7 +178,22 @@ try {
     if (languageNavigation && item.error === "net::ERR_ABORTED") signals.intentionalNavigationCancellations.push(item);
     else signals.failedRequests.push(item);
   });
-  page.on("response", response => { if (response.status() >= 400) signals.badResponses.push({ status: response.status(), url: response.url() }); });
+  page.on("response", response => {
+    if (response.status() < 400) return;
+    const request = response.request();
+    let action;
+    let namespace;
+    if (new URL(response.url()).pathname === "/api/relay" && request.method() === "POST") {
+      try {
+        const body = JSON.parse(request.postData() || "{}");
+        action = typeof body.action === "string" ? body.action : "missing";
+        namespace = typeof body.ns === "string" ? body.ns : undefined;
+      } catch { action = "unparseable"; }
+    }
+    const item = { status: response.status(), url: response.url(), method: request.method(), ...(action ? { action } : {}), ...(namespace ? { namespace } : {}) };
+    signals.badResponses.push(item);
+    console.error(`[PRODUCTION-AUDIT] HTTP-ERROR ${JSON.stringify(item)}`);
+  });
   page.setDefaultTimeout(20000);
 
   let response = await page.goto(`${origin.origin}/`, { waitUntil: "load" });

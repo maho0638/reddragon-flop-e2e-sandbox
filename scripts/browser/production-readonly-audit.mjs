@@ -176,10 +176,26 @@ try {
   });
   page.on("console", message => { if (message.type() === "error") signals.consoleErrors.push({ url: page.url(), text: message.text(), location: message.location() }); });
   page.on("pageerror", error => signals.pageErrors.push({ url: page.url(), text: error.message }));
+  let navigationGeneration = 0;
+  const requestGenerations = new WeakMap();
+  page.on("request", request => {
+    let isMainNavigation = false;
+    try { isMainNavigation = request.isNavigationRequest() && request.frame() === page.mainFrame(); } catch {}
+    if (isMainNavigation) navigationGeneration += 1;
+    requestGenerations.set(request, navigationGeneration);
+  });
   page.on("requestfailed", request => {
-    const item = { url: request.url(), error: request.failure()?.errorText || "unknown" };
-    if (languageNavigation && item.error === "net::ERR_ABORTED") signals.intentionalNavigationCancellations.push(item);
-    else signals.failedRequests.push(item);
+    const error = request.failure()?.errorText || "unknown";
+    const startedAtGeneration = requestGenerations.get(request) ?? navigationGeneration;
+    const navigationCancelled = error === "net::ERR_ABORTED" && startedAtGeneration < navigationGeneration;
+    const item = {
+      url: request.url(), method: request.method(), error, startedAtGeneration,
+      failedAtGeneration: navigationGeneration,
+      localeTransitionActive: languageNavigation,
+      classification: navigationCancelled ? "navigation-cancelled" : "unexpected"
+    };
+    signals.failedRequests.push(item);
+    if (navigationCancelled) signals.intentionalNavigationCancellations.push(item);
   });
   page.on("response", response => {
     if (response.status() < 400) return;
@@ -288,7 +304,7 @@ try {
   languageNavigation = false;
   await context.close();
 
-  const unexpectedFailedRequests = signals.failedRequests.filter(item => !signals.intentionalNavigationCancellations.includes(item));
+  const unexpectedFailedRequests = signals.failedRequests.filter(item => item.classification !== "navigation-cancelled");
   let expected404ConsoleSlots = signals.expectedMissingOwnerRecords.length;
   const unexpectedConsoleErrors = [];
   for (const error of signals.consoleErrors) {

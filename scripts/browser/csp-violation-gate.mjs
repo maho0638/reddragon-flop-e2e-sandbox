@@ -51,6 +51,15 @@ try {
   });
   const page = await context.newPage();
   let pageNavigation = false;
+  let pageClosing = false;
+  let navigationGeneration = 0;
+  const requestGenerations = new WeakMap();
+  page.on("request", request => {
+    let isMainNavigation = false;
+    try { isMainNavigation = request.isNavigationRequest() && request.frame() === page.mainFrame(); } catch {}
+    if (isMainNavigation) navigationGeneration += 1;
+    requestGenerations.set(request, navigationGeneration);
+  });
   page.on("console", message => { if (message.type() === "error") events.consoleErrors.push({ url: page.url(), message: message.text(), location: message.location() }); });
   page.on("response", response => {
     if (response.status() < 400) return;
@@ -81,9 +90,18 @@ try {
     if (frame === page.mainFrame()) events.pageTransitions.push({ url: frame.url(), at: new Date().toISOString() });
   });
   page.on("requestfailed", request => {
-    const item = { url: request.url(), error: request.failure()?.errorText || "unknown" };
+    const error = request.failure()?.errorText || "unknown";
+    const startedAtGeneration = requestGenerations.get(request) ?? navigationGeneration;
+    const navigationCancelled = error === "net::ERR_ABORTED" && startedAtGeneration < navigationGeneration;
+    const teardownCancelled = error === "net::ERR_ABORTED" && pageClosing;
+    const item = {
+      url: request.url(), method: request.method(), error, startedAtGeneration,
+      failedAtGeneration: navigationGeneration,
+      pageNavigationActive: pageNavigation,
+      classification: navigationCancelled ? "navigation-cancelled" : teardownCancelled ? "test-teardown-cancelled" : "unexpected"
+    };
     events.failedRequests.push(item);
-    if (pageNavigation && item.error === "net::ERR_ABORTED") events.intentionalNavigationCancellations.push(item);
+    if (item.classification !== "unexpected") events.intentionalNavigationCancellations.push(item);
   });
 
   for (const path of ["/", "/flop"]) {
@@ -104,10 +122,10 @@ try {
       console.log(`[CSP-AUDIT] TRANSITION ${JSON.stringify({ path, url: page.url(), cspEvents: events.csp.slice(cspStart) })}`);
     } finally { pageNavigation = false; }
   }
-  pageNavigation = true;
+  pageClosing = true;
   await context.close();
-  pageNavigation = false;
-  const unexpectedFailures = events.failedRequests.filter(item => !events.intentionalNavigationCancellations.includes(item));
+  pageClosing = false;
+  const unexpectedFailures = events.failedRequests.filter(item => item.classification === "unexpected");
   let expected404ConsoleSlots = events.expectedMissingOwnerRecords.length;
   const unexpectedConsoleErrors = [];
   for (const error of events.consoleErrors) {

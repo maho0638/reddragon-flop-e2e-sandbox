@@ -1,6 +1,7 @@
 // Local preview acceptance audit: external writes are intercepted, no real posting.
 // Browser-only DID generation uses an ephemeral test identity; no keys are uploaded or logged.
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { before, after, test } from "node:test";
@@ -214,9 +215,25 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     const backup = await backupEvent;
     assert.match(backup.suggestedFilename(), /reddragon-technocore-.*\.json/);testedActions++;
     const backupPath = await backup.path();
-    await acceptDialogDuring(page, () => page.locator("#restoreInput").setInputFiles(backupPath), "ephemeral-ui-audit-only-password");
-    await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
-    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID");testedActions++;
+    assert.ok(backupPath, "browser must provide the downloaded encrypted backup file");
+    const backupContents = await readFile(backupPath);
+    const encryptedBackup = JSON.parse(backupContents.toString("utf8"));
+    assert.equal(encryptedBackup.format, "reddragon-technocore-identity");
+    assert.ok(encryptedBackup.ciphertextB64u && encryptedBackup.saltB64u && encryptedBackup.ivB64u, "downloaded backup must contain encrypted key material");
+    const restoreDialogEvent = page.waitForEvent("dialog", { timeout: 10000 }).catch(() => null);
+    const fileChooserEvent = page.waitForEvent("filechooser");
+    await activate(page.locator("label.filebtn").filter({ has: page.locator("#restoreInput") }), sizes[0]);
+    const fileChooser = await fileChooserEvent;
+    await fileChooser.setFiles({ name: backup.suggestedFilename(), mimeType: "application/json", buffer: backupContents });
+    const restoreDialog = await restoreDialogEvent;
+    if (!restoreDialog) {
+      const evidence = await page.evaluate(() => ({ files: document.querySelector("#restoreInput")?.files?.length || 0, fileName: document.querySelector("#restoreInput")?.files?.[0]?.name || "", toast: document.querySelector("#toast")?.textContent || "" }));
+      assert.fail(`restore password dialog did not open after selecting the downloaded .json backup: ${JSON.stringify(evidence)}`);
+    }
+    assert.match(restoreDialog.message(), /backup password|yedek parolasını/i);
+    await restoreDialog.accept("ephemeral-ui-audit-only-password");
+    await page.waitForFunction(() => /Identity restored|Kimlik geri yüklendi/.test(document.querySelector("#toast")?.textContent || ""));
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID after keypair verification");testedActions++;
     await page.locator("#copyDidBtn").click();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), generatedDid);testedActions++;
     const workflows = [

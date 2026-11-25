@@ -68,6 +68,8 @@ test("wallet UI is bilingual, keeps secrets out of the page and does not submit 
   assert.match(ui, /Connect selected wallet/);
   assert.match(ui, /Seçili cüzdanı bağla/);
   assert.match(ui, /This page never receives a seed or private key/);
+  assert.ok(ui.includes('const claimMessageLabel = $("rdClaimMessage")?.parentElement?.firstChild;'));
+  assert.ok(!ui.includes('rdClaimMessage").previousElementSibling.firstChild'));
   assert.match(ui, /Bu sayfa seed veya özel anahtar almaz/);
   assert.match(ui, /method: "GET"/);
   assert.doesNotMatch(ui, /fetch\s*\(\s*[`"']https:\/\/faucet\.flop\.network/);

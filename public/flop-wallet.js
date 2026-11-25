@@ -34,7 +34,10 @@ function renderLanguage() {
   $("rdWalletProvider").setAttribute("aria-label", c.provider);
   $("rdPrepareClaim").textContent = c.prepare;
   $("rdWalletSafety").textContent = c.safety;
-  $("rdClaimMessage").previousElementSibling.firstChild.textContent = `${lang() === "tr" ? "İmzalanan mesaj" : "Signed message"}: `;
+  const claimMessageLabel = $("rdClaimMessage")?.parentElement?.firstChild;
+  if (claimMessageLabel?.nodeType === Node.TEXT_NODE) {
+    claimMessageLabel.textContent = `${lang() === "tr" ? "İmzalanan mesaj" : "Signed message"}: `;
+  }
   $("rdClaimPayload").previousElementSibling.textContent = c.payload;
   $("rdCopyClaim").textContent = c.copy;
   $("rdClaimOutput").querySelector("a").textContent = c.instructions;

@@ -28,18 +28,20 @@ jobs:
       - name: Verify read-only audit source hashes
         run: |
           sha256sum --check <<'SHA256'
-          efc21485380704bd0c383a4eaf6d7286a63d31e58591d8f805d2b8b18abc75eb  scripts/browser/production-readonly-audit.mjs
+          bfa006337676118ec817e2850f64070dcea271d21170b130d8a329be5592a916  scripts/browser/production-readonly-audit.mjs
           0710e4765bca3f639f7d6d0a74bcf0fb46d3a2797eb9916fbb105b2960cc3d4b  scripts/browser/csp-violation-gate.mjs
           SHA256
       - name: Install pinned Playwright runtime
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1
       - name: Install Chromium on temporary runner
+        id: install_chromium
         run: npx playwright install --with-deps chromium
       - name: Run production UI and responsive audit (relay writes intercepted)
         run: node scripts/browser/production-readonly-audit.mjs
         env:
           SITE_ACCEPTANCE_ORIGIN: https://reddragon-technocore.vercel.app
       - name: Fail on production CSP, browser, network or write signals
+        if: ${{ always() && steps.install_chromium.outcome == 'success' }}
         run: node scripts/browser/csp-violation-gate.mjs
         env:
           SITE_ACCEPTANCE_ORIGIN: https://reddragon-technocore.vercel.app

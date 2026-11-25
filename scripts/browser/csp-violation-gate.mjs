@@ -67,7 +67,7 @@ try {
       assert.equal(response?.status(), 200, `${path} HTTP status`);
       if (path === "/") {
         await page.locator("#rdUsageGuide").waitFor({ state: "attached", timeout: 30000 });
-        await page.locator("#rdProofImport button").waitFor({ state: "visible", timeout: 30000 });
+        await page.getByRole("button", { name: "Import Public Proof JSON", exact: true }).waitFor({ state: "visible", timeout: 30000 });
       } else {
         await page.locator("#flop-live-status").waitFor({ state: "visible", timeout: 30000 });
       }

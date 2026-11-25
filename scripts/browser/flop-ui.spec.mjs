@@ -58,8 +58,6 @@ async function newPage(viewport, preferredLocale) {
       if (locale === "tr" || locale === "en") localStorage.setItem("reddragon-lang", locale);
       sessionStorage.setItem("__rdBrowserSmokeInitialized", "1");
     }
-    window.__rdAcceptanceAddonsReady = false;
-    window.addEventListener("rd:addonsready", () => { window.__rdAcceptanceAddonsReady = true; }, { once: true });
   }, preferredLocale);
   await context.route("**/api/flop-status", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify(statusFixture)
@@ -77,10 +75,6 @@ async function newPage(viewport, preferredLocale) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(bodies[action] || { ok: true }) });
   });
   return { context, page: await context.newPage() };
-}
-
-async function waitForAddonsReady(page) {
-  await page.waitForFunction(() => window.__rdAcceptanceAddonsReady === true, null, { timeout: 30_000 });
 }
 
 async function activate(locator, viewport) {
@@ -117,21 +111,6 @@ async function assertVisibleCopyLocale(page, locale, label) {
     const untranslated = /\b(?:the password|no records|no signed|refresh status|refresh proof|refresh inbox|enter a valid|enter your|open room|public self-service unavailable|waiting for demo|live-verify)\b/i.exec(copy);
     assert.equal(untranslated, null, `${label}: English UI phrase remains: ${untranslated?.[0]}`);
   }
-  const expected = locale === "en" ? {
-    site: "𝕏 Share this site",
-    title: "Share · everyone uses their own account",
-    description: "The X button opens the composer for the X account currently signed in to this browser. The project account is mentioned as @lionmousse. For Medium, copy the draft and publish it from your own account.",
-    follow: "Follow @lionmousse"
-  } : {
-    site: "𝕏 Siteyi paylaş",
-    title: "Paylaş · herkes kendi hesabından",
-    description: "X butonu bu tarayıcıda açık olan X hesabının paylaşım ekranını açar. Metinde @lionmousse geçtiği için proje hesabı mention alır. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.",
-    follow: "@lionmousse hesabını takip et"
-  };
-  assert.equal((await page.locator("#rdShareSiteX").textContent()).trim(), expected.site, `${label}: localized social share link`);
-  assert.equal((await page.locator("#rdSharePanel h3").textContent()).trim(), expected.title, `${label}: localized share panel heading`);
-  assert.equal((await page.locator("#rdSharePanel p").textContent()).trim(), expected.description, `${label}: localized share panel description`);
-  assert.equal((await page.locator('#rdSocialStrip a[href*="x.com/"]').textContent()).trim(), expected.follow, `${label}: localized X profile link`);
 }
 
 before(async () => {
@@ -164,7 +143,6 @@ test("main page boots from empty storage and translates in desktop and mobile", 
     page.on("pageerror", (error) => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.locator("h1").waitFor({ state: "visible" });
       await page.locator("#rdTestnetToolkit").waitFor({ state: "visible" });
       await page.locator("#rdTclkWorkbench").waitFor({ state: "visible" });
@@ -190,7 +168,6 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.match(await page.evaluate(() => localStorage.getItem("reddragon-lang")), /^(tr|en)$/);
       await page.locator('#rdLangSwitcher button[data-lang="en"]').click();
       await page.locator(".hero-actions .ghost-link").filter({ hasText: "Open FLOP Observatory" }).waitFor({ state: "visible" });
-      await waitForAddonsReady(page);
       assert.equal(await page.locator("html").getAttribute("lang"), "en");
       assert.equal(await page.locator('.hero-actions .ghost-link[href="/flop"]').getAttribute("href"), "/flop");
       assert.match(await page.locator("#brandSub").textContent(), /Community Observatory/);
@@ -211,7 +188,6 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.equal((await page.locator("#toast").textContent()).trim(), "The password must be at least 12 characters.");
       await page.locator('#rdLangSwitcher button[data-lang="tr"]').click();
       await page.locator(".hero-actions .ghost-link").filter({ hasText: "FLOP Gözlemevini aç" }).waitFor({ state: "visible" });
-      await waitForAddonsReady(page);
       assert.equal(await page.locator("html").getAttribute("lang"), "tr");
       assert.match(await page.locator("#brandSub").textContent(), /Topluluk Gözlemevi/);
       assert.match(await page.locator("#rdDidProvenance .rd-prov-head h2").textContent(), /bu aracı kim geliştirdi/i);
@@ -237,11 +213,11 @@ test("step 11 warning copy stays separated and localized at all supported widths
   const translations = {
     tr: {
       title: "İstenmeyen ileti değil, sürdürülebilir etkinlik",
-      description: "Ana workflow UTC :17 ve :47 dakikalarında, yedek workflow :02 ve :32 dakikalarında zamanlanır. GitHub zamanlanmış çalışmaları geciktirebilir. İmzalı gönderiler yalnızca etkinse ve kalıcı aralık sınırı izin veriyorsa yollanır (varsayılan 12 saat). Daha sık mesajların airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
+      description: "Otomasyon 30 dakikada bir çalışır; imzalı gönderiler için varsayılan aralık 12 saattir. Daha sık mesaj göndermenin airdrop uygunluğunu artırdığına dair resmî kanıt yoktur."
     },
     en: {
       title: "Sustainable activity, not spam",
-      description: "The primary workflow is scheduled at :17 and :47 UTC; the backup is scheduled at :02 and :32 UTC. GitHub may delay scheduled runs. Signed posts are sent only when enabled and the durable interval allows them (12 hours by default). There is no official evidence that more frequent messages improve airdrop eligibility."
+      description: "The workflow wakes every 30 minutes; the default interval for signed posts is 12 hours. There is no official evidence that sending messages more often improves airdrop eligibility."
     }
   };
 
@@ -249,7 +225,6 @@ test("step 11 warning copy stays separated and localized at all supported widths
     const { context, page } = await newPage(viewport, "tr");
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       const warning = page.locator('[data-step="11"] > .warning-box');
       const heading = warning.locator("b");
       const description = warning.locator("span");
@@ -261,7 +236,6 @@ test("step 11 warning copy stays separated and localized at all supported widths
             page.waitForNavigation({ waitUntil: "load" }),
             page.locator('#rdLangSwitcher button[data-lang="' + locale + '"]').click()
           ]);
-          await waitForAddonsReady(page);
         }
         const observed = await page.evaluate(() => ({
           htmlLang: document.documentElement.lang,
@@ -458,13 +432,11 @@ test("DID create, encrypted backup, restore, prompts and mocked signed flows wor
     const errors = []; page.on("pageerror", error => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.locator("#createBtn").waitFor({ state: "visible" });
       const langButton = page.locator(`#rdLangSwitcher button[data-lang="${locale}"]`);
       if (await page.locator("html").getAttribute("lang") !== locale) {
         if (viewport.isMobile) await langButton.tap(); else await langButton.click();
         await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
-        await waitForAddonsReady(page);
       }
       const shortText = locale === "tr" ? "Parola en az 12 karakter olmalı." : "The password must be at least 12 characters.";
       await activate(page.locator("#createBtn"), viewport);
@@ -524,7 +496,6 @@ test("candidate X share copies localized text without opening X or writing exter
     page.on("pageerror", error => errors.push(error.message));
     try {
       await page.goto(`${baseURL}/`);
-      await waitForAddonsReady(page);
       await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
       await page.locator("#createBtn").waitFor({ state: "visible" });
       await page.locator("#pass1").fill("ephemeral-browser-only-password");

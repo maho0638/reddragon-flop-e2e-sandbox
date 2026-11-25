@@ -17,8 +17,9 @@ const languageBootstrap = await readFile(new URL("../public/language-bootstrap.j
 const indexHtml = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const flopHtml = await readFile(new URL("../public/flop.html", import.meta.url), "utf8");
 const browserWorkflow = await readFile(new URL("../.github/workflows/flop-site-browser-audit.yml", import.meta.url), "utf8");
-const packageManifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-const productionBrowserAudit = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const siteAcceptance = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const browserRunner = await readFile(new URL("./run-local-browser-acceptance.mjs", import.meta.url), "utf8");
+const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
 const context = { window: {}, localStorage: { getItem: () => "en" }, navigator: { language: "en-US" } };
 vm.runInNewContext(source, context);
 const i18n = context.window.RD_I18N;
@@ -90,20 +91,18 @@ test("TR/EN visible labels and dynamic live copy use the selected locale", () =>
   assert.match(languageStable, /localStorage\.setItem\(LANG_KEY, next\)[\s\S]*location\.reload\(\)/);
 });
 
-test("X proof button copies locally while explicit share intents stay localized", () => {
+test("X sharing copies localized text without a popup and proof intent remains available", () => {
   for (const lang of ["en", "tr"]) {
     assert.ok(i18n.t("patch.siteShareDraft", { site: "https://example.test", handle: "@example" }, lang).includes("https://example.test"));
     assert.ok(i18n.t("app.xShareDraft", { handle: "@example", did: "did:key:z6Mk-test", url: "https://example.test", room: "lobby", seq: "1" }, lang).includes("did:key:z6Mk-test"));
   }
   assert.match(enhancements, /window\.RD_I18N\.t\("app\.xShareDraft"/);
   assert.match(enhancements, /replacement\.onclick = \(\) => copy\(proofShareText\(\), window\.RD_I18N\.t\("app\.xTextCopied"\)\)/);
-  assert.match(enhancements, /\$\("#rdProofX"\)\.onclick = \(\) => xIntent\(proofShareText\(\)\)/);
-  assert.match(enhancements, /xIntent\(proofShareText\(\)\)/);
-  assert.match(productionBrowserAudit, /navigator\.clipboard\.readText\(\)/);
-  assert.match(productionBrowserAudit, /unexpectedPopups, \[\]/);
-  assert.match(productionBrowserAudit, /context\.pages\(\)\.length, pageCountBeforeShare/);
-  assert.match(productionBrowserAudit, /#rdDidProvenance[\s\S]*#rdProvFixRefresh/);
-  assert.match(productionBrowserAudit, /Kanıtı yenile/);
+  assert.match(enhancements, /#rdProofX[\s\S]*xIntent\(proofShareText\(\)\)/);
+  assert.match(siteAcceptance, /navigator\.clipboard\.readText\(\)/);
+  assert.match(siteAcceptance, /deepEqual\(unexpectedPopups,\s*\[\]/);
+  assert.match(siteAcceptance, /#rdDidProvenance[\s\S]*#rdProvFixRefresh/);
+  assert.match(siteAcceptance, /Kanıtı yenile/);
 });
 
 test("live-status API failure localizes both status panels without an undefined-language exception", () => {
@@ -147,18 +146,21 @@ test("both pages select and render the saved language before add-on loading", ()
   assert.match(languageStable, /window\.addEventListener\("rd:addonsready"/);
 });
 
-test("browser workflow can run only on the QA branch with read-only repository permissions", () => {
-  assert.match(packageManifest.scripts["test:browser"], /--test-concurrency=1/);
-  assert.match(packageManifest.scripts["test:browser"], /site-acceptance\.spec\.mjs scripts\/browser\/flop-ui\.spec\.mjs/);
-  assert.doesNotMatch(packageManifest.scripts["test:browser"], /production-smoke\.spec\.mjs/);
-  assert.match(packageManifest.scripts["test:browser:production"], /production-smoke\.spec\.mjs/);
-  assert.match(browserWorkflow, /push:\s*\n\s+branches:\s*\n\s+- qa\/flop-e2e-9bbc626/);
-  assert.match(browserWorkflow, /paths:\s*\n\s+- \.github\/workflows\/flop-site-browser-audit\.yml/);
-  assert.match(browserWorkflow, /github\.event_name == 'push'[\s\S]*github\.event_name == 'workflow_dispatch'/);
-  assert.match(browserWorkflow, /run_production_acceptance:[\s\S]*default: false/);
-  assert.match(browserWorkflow, /runs-on: ubuntu-24\.04/);
+test("sandbox browser workflow is QA-only, read-only, and contains no production smoke command", () => {
+  assert.match(browserWorkflow, /branches:\s*\n\s+- qa\/flop-e2e-54354b1/);
+  assert.match(browserWorkflow, /github\.ref == 'refs\/heads\/qa\/flop-e2e-54354b1'/);
+  assert.match(browserWorkflow, /paths:[\s\S]*?\.github\/workflows\/flop-site-browser-audit\.yml/);
   assert.match(browserWorkflow, /permissions:\s*\n\s+contents: read/);
-  assert.doesNotMatch(browserWorkflow, /vercel deploy|git push|gh pr merge/i);
-  assert.match(productionBrowserAudit, /Only test data; no persistent test identities or real relay writes/);
-  assert.match(productionBrowserAudit, /route\("\*\*\/api\/relay"/);
+  assert.match(browserWorkflow, /runs-on: ubuntu-24\.04/);
+  assert.doesNotMatch(browserWorkflow, /workflow_dispatch|run_production_acceptance|vercel deploy|git push|gh pr merge/i);
+  assert.match(siteAcceptance, /Only test data; no persistent test identities or real relay writes/);
+  assert.match(siteAcceptance, /route\("\*\*\/api\/relay"/);
+  const scripts = JSON.parse(packageJson).scripts;
+  assert.equal(scripts["test:browser:production"], undefined);
+  assert.equal(scripts["test:browser"], "node scripts/run-local-browser-acceptance.mjs");
+  assert.ok(browserRunner.includes('"scripts/browser/site-acceptance.spec.mjs"'));
+  assert.ok(browserRunner.includes('"scripts/browser/flop-ui.spec.mjs"'));
+  assert.equal((browserRunner.match(/\.spec\.mjs/g) || []).length, 2);
+  assert.ok(browserRunner.includes('spawnSync(process.execPath, ["--test", spec]'));
+  assert.doesNotMatch(browserRunner, /Promise\.all|--test.*\*|production-smoke/);
 });

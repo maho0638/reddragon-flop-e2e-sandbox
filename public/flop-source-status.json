@@ -1,12 +1,12 @@
 {
   "schema": "reddragon-flop-source-status/v1",
-  "checkedAt": "2026-11-10",
+  "checkedAt": "2026-11-25T18:37:14.535Z",
   "project": {
     "name": "RedDragon FLOP Community Observatory",
     "site": "https://reddragon-technocore.vercel.app/flop",
     "repository": "https://github.com/maho0638/reddragon-technocore",
     "liveStatusApi": "/api/flop-status",
-    "statusMode": "Live read-only checks; this JSON remains the conservative checked snapshot",
+    "statusMode": "Live read-only checks; this JSON is a dated snapshot and not a substitute for the live status API",
     "llms": "https://reddragon-technocore.vercel.app/llms.txt",
     "independentCommunityTool": true,
     "affiliatedWithFlopLabs": false,
@@ -79,9 +79,17 @@
   "roadmap": {
     "testnet": "Q4 2026; 3 November was a working target, not confirmed launch",
     "mainnet": "Q1 2027 target",
-    "officialFaucetEndpointVerifiedLive": false,
+    "officialFaucetEndpointVerifiedLive": true,
+    "testnetAgentClaimPath": "POST /v1/testnet/agent-claims (signed wallet request)",
+    "testnetAgentGrantFlop": 10,
+    "testnetAgentRolling24HourCapFlop": 10,
+    "testnetAgentCooldownSeconds": 86400,
+    "testnetFaucetCheckedAt": "2026-11-25T18:37:14.535Z",
     "officialInferenceEndpointVerifiedLive": false,
-    "testnetNetworkStatus": "planned / next (unreleased) as of 2026-11-10; launch not confirmed",
+    "testnetNetworkStatus": "live since 2026-11-24; unscored; no voucher activation block announced; no backfill",
+    "testnetChainId": "flop_testnet",
+    "testnetGenesisHash": "0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800",
+    "testnetRpc": "wss://testnet.flop.network",
     "devnetNetworkStatus": "public development endpoints are listed; operator admission is administrator-assisted and public self-service testnet onboarding is unavailable",
     "devnetEarnsAirdropWeight": false,
     "publicDevnetRpc": "wss://rpc.devnet.flop.network",
@@ -116,7 +124,7 @@
     "https://docs.flop.network/networks/devnet",
     "https://docs.flop.network/docs/testnet-and-timeline"
   ],
-  "disclaimer": "Independent community status snapshot checked 2026-11-10. The live status endpoint checks allowlisted official sources; an unreachable or malformed source is reported as unverified. FLOP Labs controls the actual release, rewards, conversion and eligibility. Devnet activity earns no rewards or airdrop weight. A DID, faucet note or balance does not guarantee allocation.",
+  "disclaimer": "Independent community status snapshot checked 2026-11-25T18:37:14.535Z. The live status endpoint rechecks allowlisted official sources; an unreachable or malformed source is reported as unverified. Testnet is live but unscored; no voucher activation block is published, earlier activity receives no backfill, and faucet claims do not earn vouchers. FLOP Labs controls release, rewards, conversion and eligibility. A DID, faucet note or balance does not guarantee allocation.",
   "resolvedSourceDrift": [
     {
       "id": "github-mirror-d0440-2026-09-24",

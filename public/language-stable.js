@@ -260,8 +260,8 @@ function translateEnhancements(en) {
   }
   text("#rdSharePanel h3", en ? "Share · everyone uses their own account" : "Paylaş · herkes kendi hesabından");
   text("#rdSharePanel p", en
-    ? `The X button opens the composer for the X account currently signed in to this browser. The project account is mentioned as ${cfg.xHandle || "@lionmousse"}. For Medium, copy the draft and publish it from your own account.`
-    : `X butonu bu tarayıcıda açık olan X hesabının paylaşım ekranını açar. Metinde ${cfg.xHandle || "@lionmousse"} geçtiği için proje hesabı mention alır. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.`);
+    ? `The X text is copied to your clipboard; the DID + proof button opens the X composer. For Medium, copy the draft and publish it from your own account.`
+    : `X metni panoya kopyalanır; DID + proof düğmesi X paylaşım penceresini açar. Medium için taslağı kopyalayıp kendi hesabında yayınlayabilirsin.`);
   text("#rdProofX", en ? "𝕏 Share DID + proof" : "𝕏 DID + kanıt paylaş");
   text("#rdThreadCopy", en ? "Copy 3-post thread" : "3 gönderilik diziyi kopyala");
   text("#rdMediumCopy", en ? "Copy Medium draft" : "Medium taslağını kopyala");

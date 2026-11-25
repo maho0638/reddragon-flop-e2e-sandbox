@@ -1,13 +1,16 @@
 {
-  "name": "reddragon-flop-e2e-sandbox",
-  "version": "1.0.0",
+  "name": "reddragon-technocore-agent-lab",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
   "scripts": {
+    "test": "node --test scripts/*.test.mjs",
+    "test:security-regressions": "node --test scripts/did-backup-restore.test.mjs scripts/relay.test.mjs scripts/relay-security-audit.test.mjs scripts/ui-i18n.test.mjs scripts/verify-flop-observatory.test.mjs",
     "test:local-preview": "node scripts/local-preview-http-smoke.mjs",
     "preview:local": "node scripts/local-preview-server.mjs",
-    "test:browser": "node --test --test-concurrency=1 scripts/browser/site-acceptance.spec.mjs scripts/browser/flop-ui.spec.mjs",
-    "test:security-regressions": "node --test scripts/did-backup-restore.test.mjs scripts/relay-security-audit.test.mjs scripts/ui-i18n.test.mjs"
+    "test:browser": "node scripts/run-local-browser-acceptance.mjs"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

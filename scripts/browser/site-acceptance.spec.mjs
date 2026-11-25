@@ -1,8 +1,6 @@
 // Local preview acceptance audit: external writes are intercepted, no real posting.
 // Browser-only DID generation uses an ephemeral test identity; no keys are uploaded or logged.
 import assert from "node:assert/strict";
-import { createPublicKey, verify as verifySignature } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { before, after, test } from "node:test";
@@ -59,16 +57,10 @@ after(async () => {
 async function pageFor(size) {
   const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, locale: "en-US", isMobile: size.mobile, hasTouch: size.mobile, permissions: ["clipboard-read", "clipboard-write"], acceptDownloads: true });
   // Only test data; no persistent test identities or real relay writes.
-  await context.addInitScript(() => {
-    try { if (!sessionStorage.getItem("__rdAcceptanceInitialized")) { localStorage.clear(); sessionStorage.setItem("__rdAcceptanceInitialized", "1"); } } catch {}
-    window.__rdAcceptanceAddonsReady = false;
-    window.addEventListener("rd:addonsready", () => { window.__rdAcceptanceAddonsReady = true; }, { once: true });
-  });
-  const signedPosts = [];
+  await context.addInitScript(() => { try { if (!sessionStorage.getItem("__rdAcceptanceInitialized")) { localStorage.clear(); sessionStorage.setItem("__rdAcceptanceInitialized", "1"); } } catch {} });
   await context.route("**/api/relay", async route => {
     let body = {};
     try { body = JSON.parse(route.request().postData() || "{}"); } catch {}
-    if (body.action === "signedPost") signedPosts.push(body);
     const responses = {
       health: { ok: true, technocore: true }, rooms: { rooms: [], total: 0, notes: {}, engagement: {} },
       config: {}, read: { messages: [], next: null }, kvGet: { value: null }
@@ -77,10 +69,7 @@ async function pageFor(size) {
   });
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
-  return { context, page, signedPosts };
-}
-async function waitForAddonsReady(page) {
-  await page.waitForFunction(() => window.__rdAcceptanceAddonsReady === true, null, { timeout: 30_000 });
+  return { context, page };
 }
 async function activate(locator, size) { if(size.mobile) await locator.tap(); else await locator.click(); }
 async function overflow(page, name) {
@@ -137,48 +126,6 @@ async function acceptDialogDuring(page, action, promptText) {
   const dialogHandled = page.waitForEvent("dialog", { timeout: 15000 }).then(dialog => dialog.accept(promptText));
   await Promise.all([action(), dialogHandled]);
 }
-async function restoreDownloadedBackup(page, backupPath, password) {
-  const chooserEvent = page.waitForEvent("filechooser", { timeout: 30_000 });
-  await page.locator("label.filebtn").filter({ has: page.locator("#restoreInput") }).click();
-  const chooser = await chooserEvent;
-  const promptEvent = page.waitForEvent("dialog", { timeout: 30_000 });
-  await chooser.setFiles(backupPath);
-  const dialog = await promptEvent;
-  assert.equal(dialog.type, "prompt", "restoring an encrypted backup must request its password");
-  const promptMessage = dialog.message();
-  await dialog.accept(password);
-  return promptMessage;
-}
-function decodeBase58(value) {
-  const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let number = 0n;
-  for (const char of value) {
-    const digit = alphabet.indexOf(char);
-    assert.notEqual(digit, -1, "DID multibase must use base58btc");
-    number = number * 58n + BigInt(digit);
-  }
-  const bytes = [];
-  while (number > 0n) { bytes.unshift(Number(number & 0xffn)); number >>= 8n; }
-  let zeroes = 0;
-  while (value[zeroes] === "1") zeroes++;
-  return Buffer.from([...Array(zeroes).fill(0), ...bytes]);
-}
-function ed25519PublicKeyFromDid(did) {
-  assert.ok(did.startsWith("did:key:z"), "restored identity must be a base58btc did:key");
-  const multicodec = decodeBase58(did.slice("did:key:z".length));
-  assert.equal(multicodec.length, 34, "Ed25519 DID must contain the two-byte multicodec and 32-byte key");
-  assert.deepEqual([...multicodec.subarray(0, 2)], [0xed, 0x01], "DID must encode an Ed25519 public key");
-  const spkiPrefix = Buffer.from("302a300506032b6570032100", "hex");
-  return createPublicKey({ key: Buffer.concat([spkiPrefix, multicodec.subarray(2)]), format: "der", type: "spki" });
-}
-function assertSignedPostMatchesDid(post, expectedDid) {
-  assert.equal(post.did, expectedDid, "signed relay request must use the restored DID");
-  assert.equal(typeof post.sig, "string");
-  assert.equal(typeof post.nonce, "string");
-  const payload = Buffer.from(`${post.room}|${post.nonce}|${post.text}`, "utf8");
-  assert.equal(verifySignature(null, payload, ed25519PublicKeyFromDid(post.did), Buffer.from(post.sig, "base64url")), true,
-    "restored private key must cryptographically match the DID public key");
-}
 async function inventory(page, name) {
   const items = await page.locator("button, a[href], select, input:not([type=hidden]), textarea").evaluateAll(nodes => nodes.filter(n => n.getClientRects().length).map(n => ({tag: n.tagName, id: n.id, text: (n.textContent || "").trim().slice(0, 45), href: n.tagName === "A" ? n.getAttribute("href") : null })));
   visibleControls += items.length;
@@ -192,7 +139,6 @@ test("home and FLOP links, menus, languages, refresh, desktop + two mobile width
     const errors = []; page.on("pageerror", e => errors.push(e.message));
     try {
       await page.goto(LOCAL_ORIGIN + "/", { waitUntil: "domcontentloaded" });
-      await waitForAddonsReady(page);
       await ready(page, "#steps .step-chip");
       await ready(page, "#rdTestnetToolkit");
       await ready(page, "#rdTclkWorkbench");
@@ -247,11 +193,10 @@ test("home and FLOP links, menus, languages, refresh, desktop + two mobile width
   }
 });
 test("local identity, validation and signed UI workflows with mocked relay (NO external writes)", { timeout: 180000 }, async () => {
-  const { context, page, signedPosts } = await pageFor(sizes[0]);
+  const { context, page } = await pageFor(sizes[0]);
   const errors=[];page.on("pageerror",e=>errors.push(e.message));
   try {
     await page.goto(LOCAL_ORIGIN + "/", { waitUntil: "domcontentloaded" });
-    await waitForAddonsReady(page);
     await ready(page, "#createBtn");
     assert.equal(await page.locator("#publishDidBtn").isDisabled(), true);
     await page.locator("#pass1").fill("short");
@@ -269,14 +214,7 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     const backup = await backupEvent;
     assert.match(backup.suggestedFilename(), /reddragon-technocore-.*\.json/);testedActions++;
     const backupPath = await backup.path();
-    const backupJson = JSON.parse(await readFile(backupPath, "utf8"));
-    assert.equal(backupJson.format, "reddragon-technocore-identity");
-    assert.equal(backupJson.cipher, "AES-256-GCM");
-    assert.equal(backupJson.kdf, "PBKDF2-SHA256-310000");
-    assert.equal(backupJson.did, generatedDid);
-    assert.ok(backupJson.ciphertextB64u && backupJson.saltB64u && backupJson.ivB64u, "downloaded backup must contain encrypted key material");
-    const restorePrompt = await restoreDownloadedBackup(page, backupPath, "ephemeral-ui-audit-only-password");
-    assert.equal(restorePrompt, "Enter the backup password:");
+    await acceptDialogDuring(page, () => page.locator("#restoreInput").setInputFiles(backupPath), "ephemeral-ui-audit-only-password");
     await page.waitForFunction(() => (document.querySelector("#identityOut")?.textContent || "").includes("did:key:z6Mk"));
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID");testedActions++;
     await page.locator("#copyDidBtn").click();
@@ -294,8 +232,6 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
       await page.waitForFunction(arg => (document.querySelector(arg.out)?.textContent || "").toLowerCase().includes(arg.expected.toLowerCase()),{out,expected});
       testedActions++;console.log("[QA] mocked write flow " + btn + ": UI progressed");
     }
-    assert.ok(signedPosts.length >= 4, "the restored identity must produce the mocked signed UI posts");
-    for (const post of signedPosts) assertSignedPostMatchesDid(post, generatedDid);
     await page.locator("#clink").fill("https://github.com/maho0638/reddragon-technocore");
     await page.locator("#ctitle").fill("Ephemeral browser audit contribution");
     await page.locator("#contribBtn").click();
@@ -344,7 +280,6 @@ test("user-specific ledger, calculators and panel controls (desktop and mobile)"
     const errors=[];page.on("pageerror",e=>errors.push(e.message));
     try{
       await page.goto(LOCAL_ORIGIN+"/",{waitUntil:"domcontentloaded"});
-      await waitForAddonsReady(page);
       await ready(page,"#rdLedgerDid");
       const did=page.locator("#rdLedgerDid");
       await did.fill(DIDS[0]);

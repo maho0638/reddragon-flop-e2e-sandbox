@@ -9,7 +9,10 @@ const SOURCES = Object.freeze({
   paperContent: "https://api.github.com/repos/flop-labs/yellowpaper/commits?path=yellowpaper.md&per_page=1",
   repoHead: "https://api.github.com/repos/flop-labs/yellowpaper/commits/main",
   models: "https://api.flop.network/v1/models",
-  rpc: "https://rpc.devnet.flop.network"
+  rpc: "https://rpc.devnet.flop.network",
+  testnetRpc: "https://testnet.flop.network",
+  faucetChain: "https://faucet.flop.network/chain",
+  faucetLimits: "https://faucet.flop.network/limits"
 });
 const MAX_BYTES = 256 * 1024;
 // The official docs/API answered in ~4.6–5.9s in the authorized read-only
@@ -96,12 +99,31 @@ export function classifyTestnetPage(html) {
   const head = text.slice(0, 700);
   const hasIdentity = /Network\s*:\s*testnet/i.test(head);
   const release = head.match(/Release\s*:\s*([^\n·]{1,100})/i)?.[1]?.trim() || "";
+  if (/FLOP Testnet went live on\s+\d{1,2}\s+[A-Za-z]+\s+\d{4}/i.test(text) && /opening is unscored/i.test(text)) return { state: "live-unscored", release: "live · unscored" };
   const unreleased = /planned|unreleased|\bnext\b/i.test(head) || /public operator enrollment is unavailable|None verified/i.test(text);
   const hasRpc = /\bRPC\s+(?:wss?:\/\/|https?:\/\/)/i.test(text);
   const hasGenesis = /Expected genesis\s+0x[0-9a-f]{32,}/i.test(text);
   if (hasIdentity && unreleased) return { state: "not-live", release: release || "unreleased" };
   if (hasIdentity && hasRpc && hasGenesis) return { state: "manual-verification-required", release };
   return { state: "unverified", release: release || null };
+}
+
+export function parseFaucetChain(raw) {
+  const value = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (!value || value.network !== "testnet" || value.genesisHash !== "0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800" || value.rpc !== "wss://testnet.flop.network" || value.ss58Format !== 42 || value.decimals !== 18 || value.tokenSymbol !== "FLOP") throw new Error("Faucet Testnet identity mismatch");
+  return { network: value.network, chain: "FLOP Testnet", genesisHash: value.genesisHash, rpc: value.rpc, ss58Format: value.ss58Format, decimals: value.decimals, tokenSymbol: value.tokenSymbol };
+}
+
+export function parseFaucetLimits(raw) {
+  const value = typeof raw === "string" ? JSON.parse(raw) : raw;
+  const faucet = value?.faucet;
+  if (!value || value.network !== "testnet" || !faucet || !["open", "closed", "unavailable"].includes(faucet.status) || faucet.agent?.claimPath !== "/v1/testnet/agent-claims") throw new Error("Faucet limits response is not the Testnet agent-claim contract");
+  const amount = String(faucet.agent.grantFlop ?? "");
+  const cap = String(faucet.agent.rolling24HourCapFlop ?? "");
+  const cooldown = Number(faucet.agent.cooldownSeconds);
+  if (!/^\d{1,20}$/.test(amount) || !/^\d{1,20}$/.test(cap) || !Number.isSafeInteger(cooldown) || cooldown < 1) throw new Error("Invalid faucet limit values");
+  const asOf = typeof value.asOf === "string" && !Number.isNaN(Date.parse(value.asOf)) ? value.asOf : null;
+  return { network: value.network, state: faucet.status === "open" ? "open" : faucet.status, claimPath: faucet.agent.claimPath, grantFlop: amount, rolling24HourCapFlop: cap, cooldownSeconds: cooldown, rolloverRequiresSpend: faucet.agent.rolloverRequiresSpend === true, asOf, stale: value.stale === true };
 }
 
 export function parseDevnetPage(html) {
@@ -195,6 +217,19 @@ async function probeRpc(fetchFn) {
   } catch (error) { return { state: "unverified", error: String(error?.name === "AbortError" ? "RPC timeout" : error?.message || "RPC unavailable").slice(0, 140), source: SOURCES.rpc }; }
 }
 
+async function probeTestnetRpc(fetchFn) {
+  try {
+    const text = await fetchText(SOURCES.testnetRpc, fetchFn, {
+      method: "POST", headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "chain_getBlockHash", params: [0] })
+    });
+    const parsed = JSON.parse(text);
+    if (parsed.id !== 1 || parsed.error || !/^0x[0-9a-f]{64}$/i.test(parsed.result || "")) throw new Error("Invalid Testnet genesis response");
+    const expectedGenesis = "0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800";
+    return { state: parsed.result.toLowerCase() === expectedGenesis ? "identity-matched" : "identity-mismatch", genesis: parsed.result, expectedGenesis, source: SOURCES.testnetRpc };
+  } catch (error) { return { state: "unverified", error: String(error?.name === "AbortError" ? "RPC timeout" : error?.message || "RPC unavailable").slice(0, 140), source: SOURCES.testnetRpc }; }
+}
+
 function hasCurrentSourceData(data) {
   return [
     data.testnet?.state,
@@ -210,7 +245,7 @@ function hasCurrentSourceData(data) {
 }
 
 export async function buildStatus({ fetchFn = fetch, now = new Date() } = {}) {
-  const [testnet, devnet, official, sdks, validator, validatorManual, timeline, paperContent, repoHead, catalog, rpc] = await Promise.all([
+  const [testnet, devnet, official, sdks, validator, validatorManual, timeline, paperContent, repoHead, catalog, rpc, faucetChain, faucetLimits, testnetRpc] = await Promise.all([
     capture("testnet", SOURCES.testnet, classifyTestnetPage, fetchFn),
     capture("devnet", SOURCES.devnet, parseDevnetPage, fetchFn),
     capture("official", SOURCES.official, (html) => ({ tokenClaim: /there is no FLOP token yet/i.test(sourceText(html)), updated: sourceText(html).match(/Updated (\d{4}-\d{2}-\d{2})/i)?.[1] || null }), fetchFn),
@@ -221,8 +256,14 @@ export async function buildStatus({ fetchFn = fetch, now = new Date() } = {}) {
     capture("paperContent", SOURCES.paperContent, (raw) => parseCommit(JSON.parse(raw)), fetchFn),
     capture("repoHead", SOURCES.repoHead, (raw) => parseCommit(JSON.parse(raw)), fetchFn),
     capture("models", SOURCES.models, parseModels, fetchFn),
-    probeRpc(fetchFn)
+    probeRpc(fetchFn),
+    capture("faucetChain", SOURCES.faucetChain, parseFaucetChain, fetchFn),
+    capture("faucetLimits", SOURCES.faucetLimits, parseFaucetLimits, fetchFn),
+    probeTestnetRpc(fetchFn)
   ]);
+  const limitsAt = Date.parse(faucetLimits.data?.asOf || "");
+  const limitsFresh = Number.isFinite(limitsAt) && limitsAt <= now.getTime() + 60_000 && now.getTime() - limitsAt <= 5 * 60_000 && faucetLimits.data?.stale !== true;
+  const faucetReady = faucetChain.state === "verified" && faucetLimits.state === "verified" && faucetChain.data?.genesisHash === testnetRpc.expectedGenesis && testnetRpc.state === "identity-matched" && limitsFresh;
   const data = {
     schema: "reddragon-flop-live-status/v1",
     checkedAt: now.toISOString(),
@@ -230,10 +271,10 @@ export async function buildStatus({ fetchFn = fetch, now = new Date() } = {}) {
     testnet: { ...testnet.data, source: SOURCES.testnet, state: testnet.state === "verified" ? testnet.data.state : "unverified", checkedAt: testnet.checkedAt, error: testnet.error },
     devnet: { ...devnet.data, rewards: devnet.state === "verified" && devnet.data.rewards === "none" ? "none" : timeline.state === "verified" ? timeline.data.devnetRewards : "unverified", source: SOURCES.devnet, state: devnet.state === "verified" ? devnet.data.state : "unverified", checkedAt: devnet.checkedAt, error: devnet.error },
     timeline: { ...timeline.data, state: timeline.state, source: SOURCES.timeline, checkedAt: timeline.checkedAt, error: timeline.error },
-    services: { gateway: { state: catalog.state === "verified" ? "catalog-responded" : "unverified", source: SOURCES.models, count: catalog.data?.count, models: catalog.data?.models, error: catalog.error }, rpc, faucet: { state: "published-endpoint; operational-status-unverified", url: "https://faucet.flop.network", source: SOURCES.official } },
+    services: { gateway: { state: catalog.state === "verified" ? "catalog-responded" : "unverified", source: SOURCES.models, count: catalog.data?.count, models: catalog.data?.models, error: catalog.error, testnetInference: "not-open" }, rpc, testnetRpc, faucet: { state: faucetReady ? faucetLimits.data.state : "unverified", ready: faucetReady && faucetLimits.data.state === "open", url: "https://faucet.flop.network", source: SOURCES.faucetChain, chain: faucetChain.data || null, limits: faucetLimits.data || null, errors: [faucetChain.error, faucetLimits.error].filter(Boolean) } },
     packages: { state: sdks.state === "verified" ? "verified-from-docs" : "unverified", source: SOURCES.sdks, versions: sdks.data || [], error: sdks.error, validatorPackage: validator.data?.packageVersion || null, validatorSource: SOURCES.validator, validatorManualVersion: validatorManual.data?.packageVersion || null, validatorManualUpdated: validatorManual.data?.updated || null, validatorManualSource: SOURCES.validatorManual, validatorAdmission: validator.data?.admission || "unverified" },
     yellowPaper: { version: "0.5.0 (draft)", livePageUpdated: "2026-09-24", liveSource: "https://flop.finance/intro/yellowpaper/", githubContentCommit: paperContent.data || null, githubRepositoryHead: repoHead.data || null, contentVsCiDistinguished: true, sources: { content: SOURCES.paperContent, repositoryHead: SOURCES.repoHead } },
-    notes: { devnetRewards: timeline.state === "verified" && timeline.data.devnetRewards === "none" ? "Official timeline FAQ says devnet earns nothing and has no reward or airdrop weight" : "unverified from current official sources", testnetDate: timeline.data?.testnetTarget || "Q4 2026 draft target; launch unverified", airdropConversion: "E.38 remains open; no individual reward estimate is produced", methodology: "Official sources and public read-only probes only. Failed checks remain unverified." }
+    notes: { devnetRewards: timeline.state === "verified" && timeline.data.devnetRewards === "none" ? "Official timeline FAQ says devnet earns nothing and has no reward or airdrop weight" : "unverified from current official sources", testnetDate: testnet.data?.state === "live-unscored" ? "Live since 2026-11-24; unscored; no activation block announced" : timeline.data?.testnetTarget || "unverified", airdropConversion: "No individual reward estimate; Testnet voucher activation block has not been announced", methodology: "Official sources and public read-only probes only. Failed checks remain unverified." }
   };
   return data;
 }
@@ -270,7 +311,7 @@ export async function handler(req, res) {
 }
 
 export const __test = {
-  SOURCES, safeUrl, fetchText, parseModels, parseTimelinePage, readLimited, hasCurrentSourceData,
+  SOURCES, safeUrl, fetchText, parseModels, parseTimelinePage, parseFaucetChain, parseFaucetLimits, probeTestnetRpc, readLimited, hasCurrentSourceData,
   getCache: () => memoryCache,
   resetCache: () => { memoryCache = undefined; },
   seedCache: (data, savedAt) => { memoryCache = { data, savedAt }; }

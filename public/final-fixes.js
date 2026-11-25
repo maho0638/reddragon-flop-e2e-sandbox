@@ -264,6 +264,10 @@ function applyFinalFixes() {
   }
 }
 
+window.addEventListener("rd:languagechange", (event) => {
+  if (event.detail?.lang === "tr" || event.detail?.lang === "en") applyFinalFixes();
+});
+
 window.addEventListener("load", () => {
   applyFinalFixes();
   setTimeout(applyFinalFixes, 300);

@@ -16,6 +16,7 @@ const provenanceRefresh = await readFile(new URL("../public/provenance-room-refr
 const liveObservatorySource = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const testnetToolkitSource = await readFile(new URL("../public/testnet-toolkit.js", import.meta.url), "utf8");
 const tclkWorkbenchSource = await readFile(new URL("../public/tclk-workbench.js", import.meta.url), "utf8");
+const finalFixesSource = await readFile(new URL("../public/final-fixes.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const capacity = await readFile(new URL("../public/technocore-capacity.js", import.meta.url), "utf8");
 const languageBootstrap = await readFile(new URL("../public/language-bootstrap.js", import.meta.url), "utf8");
@@ -195,6 +196,10 @@ test("TCLK workbench rerenders every static label and retained transcript on sha
 
 test("transient toast does not leave stale-language copy after locale switch", () => {
   assert.match(app, /window\.addEventListener\("rd:languagechange",\s*\(\)\s*=>\s*\{\s*const message=\$\("#toast"\)[\s\S]*?clearTimeout\(toast\.t\)[\s\S]*?message\.textContent="";[\s\S]*?message\.classList\.remove\("show"\)/);
+});
+
+test("generated usage guide rerenders when the shared locale changes", () => {
+  assert.match(finalFixesSource, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>\s*\{[\s\S]*?applyFinalFixes\(\)/);
 });
 
 test("sequential browser suites share one loopback preview and reject production origins", () => {

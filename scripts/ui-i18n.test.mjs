@@ -193,6 +193,10 @@ test("TCLK workbench rerenders every static label and retained transcript on sha
   assert.match(tclk, /window\.addEventListener\("rd:languagechange",rdTclkApplyLocale\)/);
 });
 
+test("transient toast does not leave stale-language copy after locale switch", () => {
+  assert.match(app, /window\.addEventListener\("rd:languagechange",\s*\(\)\s*=>\s*\{\s*const message=\$\("#toast"\)[\s\S]*?clearTimeout\(toast\.t\)[\s\S]*?message\.textContent="";[\s\S]*?message\.classList\.remove\("show"\)/);
+});
+
 test("sequential browser suites share one loopback preview and reject production origins", () => {
   assert.match(browserRunner, /await startPreview\(\)/);
   assert.match(browserRunner, /SITE_ACCEPTANCE_ORIGIN:\s*origin/);

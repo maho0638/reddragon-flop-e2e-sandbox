@@ -17,7 +17,7 @@ const sizes = [
 const readOnlyRelayActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
 const checks = [];
 const checkFailures = [];
-const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], blockedWrites: [] };
+const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], pageTransitions: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], blockedWrites: [] };
 
 function recordCheck(name, detail) {
   checks.push({ name, ...detail });
@@ -145,9 +145,32 @@ try {
   });
   const page = await context.newPage();
   let languageNavigation = false;
-  await page.addInitScript(() => addEventListener("securitypolicyviolation", event => {
-    (window.__rdCspViolations ||= []).push({ directive: event.effectiveDirective, blockedURI: event.blockedURI, sourceFile: event.sourceFile, lineNumber: event.lineNumber });
-  }));
+  await context.exposeBinding("__rdReportCspViolation", (source, violation) => {
+    signals.cspViolations.push({ pageUrl: source.url, ...violation });
+  });
+  await page.addInitScript(() => {
+    window.__rdCspViolations = [];
+    addEventListener("securitypolicyviolation", event => {
+      const violation = {
+        documentURI: event.documentURI,
+        violatedDirective: event.violatedDirective,
+        effectiveDirective: event.effectiveDirective,
+        originalPolicy: event.originalPolicy,
+        disposition: event.disposition,
+        blockedURI: event.blockedURI,
+        sourceFile: event.sourceFile,
+        lineNumber: event.lineNumber,
+        columnNumber: event.columnNumber,
+        sample: event.sample,
+        statusCode: event.statusCode
+      };
+      window.__rdCspViolations.push(violation);
+      window.__rdReportCspViolation(violation);
+    });
+  });
+  page.on("framenavigated", frame => {
+    if (frame === page.mainFrame()) signals.pageTransitions.push({ url: frame.url(), at: new Date().toISOString() });
+  });
   page.on("console", message => { if (message.type() === "error") signals.consoleErrors.push({ url: page.url(), text: message.text(), location: message.location() }); });
   page.on("pageerror", error => signals.pageErrors.push({ url: page.url(), text: error.message }));
   page.on("requestfailed", request => {
@@ -158,7 +181,7 @@ try {
   page.on("response", response => { if (response.status() >= 400) signals.badResponses.push({ status: response.status(), url: response.url() }); });
   page.setDefaultTimeout(20000);
 
-  let response = await page.goto(`${origin.origin}/`, { waitUntil: "domcontentloaded" });
+  let response = await page.goto(`${origin.origin}/`, { waitUntil: "load" });
   assert.equal(response?.status(), 200, `home page returned HTTP ${response?.status()}`);
   await page.locator("#steps .step-chip").first().waitFor({ state: "visible" });
   await page.locator("#rdTestnetToolkit").waitFor({ state: "attached" });
@@ -169,10 +192,31 @@ try {
       languageNavigation = true;
       try {
         await page.locator(`#rdLangSwitcher button[data-lang='${locale}']`).click();
-        await page.waitForLoadState("domcontentloaded");
+        await page.waitForLoadState("load");
         await page.locator("#createBtn").waitFor({ state: "attached" });
-        await page.waitForFunction(({ locale, expected }) => document.documentElement.lang === locale && document.querySelector("#createBtn")?.textContent.trim() === expected,
-          { locale, expected: locale === "en" ? "Create new DID" : "Yeni DID oluştur" });
+        await page.waitForFunction(({ locale, expected, publicProof, share, shareHeading, github, copyKey, autoOut }) => {
+          const text = selector => document.querySelector(selector)?.innerText.trim() || "";
+          const cssReady = [...document.querySelectorAll("head link[rel='stylesheet']")].every(link => !!link.sheet);
+          return document.readyState === "complete" &&
+            document.documentElement.lang === locale &&
+            text("#createBtn") === expected &&
+            text("#rdProofImport button") === publicProof &&
+            text("#rdShareSiteX") === share &&
+            text("#rdSharePanel h3") === shareHeading &&
+            text("#repoBtn") === github &&
+            text("#copyDidSecret") === copyKey &&
+            document.querySelector("#rdUsageGuide") &&
+            document.querySelector("#autoOut")?.textContent.trim() === autoOut &&
+            cssReady;
+        }, locale === "en" ? {
+          locale, expected: "Create new DID", publicProof: "Import Public Proof JSON", share: "𝕏 Share this site",
+          shareHeading: "Share · everyone uses their own account", github: "Open GitHub repository", copyKey: "Copy",
+          autoOut: "Fork-safe agent: the DID is derived from the private key. Primary + backup schedules provide redundancy; only one GitHub Secret is required."
+        } : {
+          locale, expected: "Yeni DID oluştur", publicProof: "Herkese Açık Kanıt JSON'unu içe aktar", share: "𝕏 Siteyi paylaş",
+          shareHeading: "Paylaş · herkes kendi hesabından", github: "GitHub repo'yu aç", copyKey: "Kopyala",
+          autoOut: "Fork-safe ajan: DID private key'den otomatik türetilir. Ana + yedek schedule ile yedekli çalışır; yalnızca tek GitHub Secret gerekir."
+        }, { timeout: 45000 });
       } finally { languageNavigation = false; }
       try { await inspect(page, "home", locale, size, size.width === 1440 && locale === "en"); }
       catch (error) { const item = { route: "home", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
@@ -196,8 +240,8 @@ try {
       languageNavigation = true;
       try {
         await page.locator("#rdFlopLanguage").selectOption(locale);
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+        await page.waitForLoadState("load");
+        await page.waitForFunction(expected => document.readyState === "complete" && document.documentElement.lang === expected, locale);
       } finally { languageNavigation = false; }
       try { await inspect(page, "flop", locale, size, size.width === 1440 && locale === "tr"); }
       catch (error) { const item = { route: "flop", locale, width: size.width, message: error.message }; checkFailures.push(item); console.error(`[PRODUCTION-AUDIT] CHECK-FAIL ${JSON.stringify(item)}`); }
@@ -205,26 +249,25 @@ try {
   }
   languageNavigation = true;
   await page.locator("#rdFlopLanguage").selectOption("en");
-  await page.waitForLoadState("domcontentloaded");
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
+  await page.reload({ waitUntil: "load" });
   await page.locator("#flop-live-status").waitFor({ state: "visible" });
   assert.equal(await page.locator("#rdFlopLanguage").inputValue(), "en", "English language must persist after reload");
   await page.locator("#rdFlopLanguage").selectOption("tr");
-  await page.waitForLoadState("domcontentloaded");
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
+  await page.reload({ waitUntil: "load" });
   await page.locator("#flop-live-status").waitFor({ state: "visible" });
   assert.equal(await page.locator("#rdFlopLanguage").inputValue(), "tr", "Turkish language must persist after reload");
   languageNavigation = false;
-  signals.cspViolations = await page.evaluate(() => window.__rdCspViolations || []);
   await context.close();
 
-  const firstPartyErrors = signals.consoleErrors.filter(item => item.url.startsWith(origin.origin));
-  const firstPartyFailures = signals.failedRequests.filter(item => item.url.startsWith(origin.origin));
-  const firstPartyBadResponses = signals.badResponses.filter(item => item.url.startsWith(origin.origin) && !(item.status === 405 && item.url.includes("/api/relay")));
+  const unexpectedFailedRequests = signals.failedRequests.filter(item => !signals.intentionalNavigationCancellations.includes(item));
+  const unexpectedBadResponses = signals.badResponses.filter(item => !(item.status === 405 && item.url.includes("/api/relay")));
   assert.deepEqual(signals.pageErrors, [], "production JavaScript exceptions");
-  assert.deepEqual(firstPartyErrors, [], "first-party console errors");
-  assert.deepEqual(firstPartyFailures, [], "first-party failed network requests");
-  assert.deepEqual(firstPartyBadResponses, [], "first-party HTTP errors");
+  assert.deepEqual(signals.consoleErrors, [], "all production browser console errors");
+  assert.deepEqual(unexpectedFailedRequests, [], "unexpected production network failures; every failure remains in signals.failedRequests");
+  assert.deepEqual(unexpectedBadResponses, [], "unexpected production HTTP errors; every response remains in signals.badResponses");
+  assert.deepEqual(signals.cspViolations, [], "all CSP violations captured across every page transition");
   assert.deepEqual(signals.blockedWrites, [], "the production UI attempted a relay write during the read-only audit");
   console.log(`[PRODUCTION-AUDIT] SUMMARY ${JSON.stringify({ checks: checks.length, checkFailures, viewportWidths: sizes.map(item => item.width), signals })}`);
   assert.equal(checks.length, 16, "all four viewport widths, two routes and two languages must be inspected");

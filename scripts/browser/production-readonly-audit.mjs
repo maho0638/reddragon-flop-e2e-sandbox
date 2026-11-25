@@ -15,9 +15,12 @@ const sizes = [
   { name: "1440", width: 1440, height: 900, mobile: false }
 ];
 const readOnlyRelayActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
+// This optional public ownership claim is absent upstream. The UI renders it as missing,
+// never verified; every other HTTP error remains unexpected.
+const EXPECTED_MISSING_OWNER = Object.freeze({ status: 404, method: "POST", path: "/api/relay", action: "kvGet", namespace: "room-owners", key: "d-reddragon-835ae177" });
 const checks = [];
 const checkFailures = [];
-const signals = { consoleErrors: [], cspViolations: [], pageErrors: [], pageTransitions: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], blockedWrites: [] };
+const signals = { consoleErrors: [], expectedMissingOwnerConsoleErrors: [], unexpectedConsoleErrors: [], cspViolations: [], pageErrors: [], pageTransitions: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], expectedMissingOwnerRecords: [], blockedWrites: [] };
 
 function recordCheck(name, detail) {
   checks.push({ name, ...detail });
@@ -183,16 +186,25 @@ try {
     const request = response.request();
     let action;
     let namespace;
+    let key;
     if (new URL(response.url()).pathname === "/api/relay" && request.method() === "POST") {
       try {
         const body = JSON.parse(request.postData() || "{}");
         action = typeof body.action === "string" ? body.action : "missing";
         namespace = typeof body.ns === "string" ? body.ns : undefined;
+        key = typeof body.key === "string" ? body.key : undefined;
       } catch { action = "unparseable"; }
     }
-    const item = { status: response.status(), url: response.url(), method: request.method(), ...(action ? { action } : {}), ...(namespace ? { namespace } : {}) };
+    const item = { status: response.status(), url: response.url(), method: request.method(), ...(action ? { action } : {}), ...(namespace ? { namespace } : {}), ...(key ? { key } : {}) };
+    const exactMissingOwner =
+      item.status === EXPECTED_MISSING_OWNER.status && item.method === EXPECTED_MISSING_OWNER.method &&
+      new URL(item.url).origin === origin.origin && new URL(item.url).pathname === EXPECTED_MISSING_OWNER.path &&
+      item.action === EXPECTED_MISSING_OWNER.action && item.namespace === EXPECTED_MISSING_OWNER.namespace &&
+      item.key === EXPECTED_MISSING_OWNER.key;
+    item.classification = exactMissingOwner ? "expected-missing-owner-record" : "unexpected-http-error";
     signals.badResponses.push(item);
-    console.error(`[PRODUCTION-AUDIT] HTTP-ERROR ${JSON.stringify(item)}`);
+    if (exactMissingOwner) signals.expectedMissingOwnerRecords.push(item);
+    console.log(`[PRODUCTION-AUDIT] HTTP-ERROR ${JSON.stringify(item)}`);
   });
   page.setDefaultTimeout(20000);
 
@@ -277,11 +289,27 @@ try {
   await context.close();
 
   const unexpectedFailedRequests = signals.failedRequests.filter(item => !signals.intentionalNavigationCancellations.includes(item));
-  const unexpectedBadResponses = signals.badResponses.filter(item => !(item.status === 405 && item.url.includes("/api/relay")));
+  let expected404ConsoleSlots = signals.expectedMissingOwnerRecords.length;
+  const unexpectedConsoleErrors = [];
+  for (const error of signals.consoleErrors) {
+    const exactMissingOwnerConsole =
+      expected404ConsoleSlots > 0 && error.location?.url === new URL(EXPECTED_MISSING_OWNER.path, origin.origin).href &&
+      /server responded with a status of 404/i.test(error.text);
+    if (exactMissingOwnerConsole) {
+      signals.expectedMissingOwnerConsoleErrors.push(error);
+      expected404ConsoleSlots--;
+    } else unexpectedConsoleErrors.push(error);
+  }
+  signals.unexpectedConsoleErrors = unexpectedConsoleErrors;
+  const unexpectedBadResponses = signals.badResponses.filter(item => {
+    const methodGuard = item.status === 405 && item.method === "GET" &&
+      new URL(item.url).origin === origin.origin && new URL(item.url).pathname === "/api/relay";
+    return item.classification !== "expected-missing-owner-record" && !methodGuard;
+  });
   assert.deepEqual(signals.pageErrors, [], "production JavaScript exceptions");
-  assert.deepEqual(signals.consoleErrors, [], "all production browser console errors");
+  assert.deepEqual(unexpectedConsoleErrors, [], "all console errors except the one-for-one exact missing-owner 404");
   assert.deepEqual(unexpectedFailedRequests, [], "unexpected production network failures; every failure remains in signals.failedRequests");
-  assert.deepEqual(unexpectedBadResponses, [], "unexpected production HTTP errors; every response remains in signals.badResponses");
+  assert.deepEqual(unexpectedBadResponses, [], "unexpected HTTP errors; exact missing record remains in signals.badResponses");
   assert.deepEqual(signals.cspViolations, [], "all CSP violations captured across every page transition");
   assert.deepEqual(signals.blockedWrites, [], "the production UI attempted a relay write during the read-only audit");
   console.log(`[PRODUCTION-AUDIT] SUMMARY ${JSON.stringify({ checks: checks.length, checkFailures, viewportWidths: sizes.map(item => item.width), signals })}`);

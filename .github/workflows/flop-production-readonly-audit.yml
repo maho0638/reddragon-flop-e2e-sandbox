@@ -1,12 +1,7 @@
 name: FLOP production read-only Chromium acceptance
 
 on:
-  push:
-    branches:
-      - qa/flop-e2e-9bbc626
-    paths:
-      - .github/workflows/flop-production-readonly-audit.yml
-      - scripts/browser/production-readonly-audit.mjs
+  workflow_dispatch:
 
 permissions:
   contents: read

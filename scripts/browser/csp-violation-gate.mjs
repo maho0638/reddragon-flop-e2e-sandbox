@@ -8,7 +8,10 @@ assert.equal(origin.protocol, "https:", "production CSP audit requires HTTPS");
 assert.equal(origin.hostname, "reddragon-technocore.vercel.app", "audit is pinned to the production host");
 
 const readOnlyActions = new Set(["health", "rooms", "config", "read", "kvGet"]);
-const events = { csp: [], pageErrors: [], consoleErrors: [], failedRequests: [], intentionalNavigationCancellations: [], pageTransitions: [], blockedWrites: [] };
+// This optional public ownership claim is absent upstream. The UI renders it as missing,
+// never verified; every other HTTP error remains unexpected.
+const EXPECTED_MISSING_OWNER = Object.freeze({ status: 404, method: "POST", path: "/api/relay", action: "kvGet", namespace: "room-owners", key: "d-reddragon-835ae177" });
+const events = { csp: [], pageErrors: [], consoleErrors: [], expectedMissingOwnerConsoleErrors: [], unexpectedConsoleErrors: [], failedRequests: [], intentionalNavigationCancellations: [], badResponses: [], expectedMissingOwnerRecords: [], pageTransitions: [], blockedWrites: [] };
 const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({ locale: "en-US" });
@@ -48,7 +51,31 @@ try {
   });
   const page = await context.newPage();
   let pageNavigation = false;
-  page.on("console", message => { if (message.type() === "error") events.consoleErrors.push({ url: page.url(), message: message.text() }); });
+  page.on("console", message => { if (message.type() === "error") events.consoleErrors.push({ url: page.url(), message: message.text(), location: message.location() }); });
+  page.on("response", response => {
+    if (response.status() < 400) return;
+    const request = response.request();
+    let action;
+    let namespace;
+    let key;
+    if (new URL(response.url()).pathname === "/api/relay" && request.method() === "POST") {
+      try {
+        const body = JSON.parse(request.postData() || "{}");
+        action = typeof body.action === "string" ? body.action : "missing";
+        namespace = typeof body.ns === "string" ? body.ns : undefined;
+        key = typeof body.key === "string" ? body.key : undefined;
+      } catch { action = "unparseable"; }
+    }
+    const item = { status: response.status(), url: response.url(), method: request.method(), ...(action ? { action } : {}), ...(namespace ? { namespace } : {}), ...(key ? { key } : {}) };
+    const exactMissingOwner =
+      item.status === EXPECTED_MISSING_OWNER.status && item.method === EXPECTED_MISSING_OWNER.method &&
+      new URL(item.url).origin === origin.origin && new URL(item.url).pathname === EXPECTED_MISSING_OWNER.path &&
+      item.action === EXPECTED_MISSING_OWNER.action && item.namespace === EXPECTED_MISSING_OWNER.namespace &&
+      item.key === EXPECTED_MISSING_OWNER.key;
+    item.classification = exactMissingOwner ? "expected-missing-owner-record" : "unexpected-http-error";
+    events.badResponses.push(item);
+    if (exactMissingOwner) events.expectedMissingOwnerRecords.push(item);
+  });
   page.on("pageerror", error => events.pageErrors.push({ url: page.url(), message: error.message }));
   page.on("framenavigated", frame => {
     if (frame === page.mainFrame()) events.pageTransitions.push({ url: frame.url(), at: new Date().toISOString() });
@@ -81,11 +108,25 @@ try {
   await context.close();
   pageNavigation = false;
   const unexpectedFailures = events.failedRequests.filter(item => !events.intentionalNavigationCancellations.includes(item));
+  let expected404ConsoleSlots = events.expectedMissingOwnerRecords.length;
+  const unexpectedConsoleErrors = [];
+  for (const error of events.consoleErrors) {
+    const exactMissingOwnerConsole =
+      expected404ConsoleSlots > 0 && error.location?.url === new URL(EXPECTED_MISSING_OWNER.path, origin.origin).href &&
+      /server responded with a status of 404/i.test(error.message);
+    if (exactMissingOwnerConsole) {
+      events.expectedMissingOwnerConsoleErrors.push(error);
+      expected404ConsoleSlots--;
+    } else unexpectedConsoleErrors.push(error);
+  }
+  events.unexpectedConsoleErrors = unexpectedConsoleErrors;
+  const unexpectedResponses = events.badResponses.filter(item => item.classification !== "expected-missing-owner-record");
   console.log(`[CSP-AUDIT] ${JSON.stringify(events)}`);
   assert.deepEqual(events.csp, [], "production must emit no CSP violation events on any audited page transition");
   assert.deepEqual(events.pageErrors, [], "production must emit no uncaught JavaScript errors");
-  assert.deepEqual(events.consoleErrors, [], "production must emit no browser console errors");
+  assert.deepEqual(unexpectedConsoleErrors, [], "all console errors except the one-for-one exact missing-owner 404");
   assert.deepEqual(unexpectedFailures, [], "unexpected failed requests; every failure remains in the log");
+  assert.deepEqual(unexpectedResponses, [], "unexpected HTTP responses; exact missing record remains visible in badResponses");
   assert.deepEqual(events.blockedWrites, [], "read-only production audit must not attempt writes");
 } finally {
   await browser.close();

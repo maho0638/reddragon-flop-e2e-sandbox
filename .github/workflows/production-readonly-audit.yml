@@ -28,8 +28,8 @@ jobs:
       - name: Verify read-only audit source hashes
         run: |
           sha256sum --check <<'SHA256'
-          bfa006337676118ec817e2850f64070dcea271d21170b130d8a329be5592a916  scripts/browser/production-readonly-audit.mjs
-          ff86986e6b043e07fb10eefde15075a7d59811e0dd7886a8d61d4b80d8932ee1  scripts/browser/csp-violation-gate.mjs
+          af4f63732e1324e09a856b398f1704a5fd3a50548d0a27f2c21b8a42b7cc9243  scripts/browser/production-readonly-audit.mjs
+          4740b12e9fd5ee33c9c3530fcff5ac6e524f2d2418694e929c0d88c3aae42c00  scripts/browser/csp-violation-gate.mjs
           SHA256
       - name: Install pinned Playwright runtime
         run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.65.1

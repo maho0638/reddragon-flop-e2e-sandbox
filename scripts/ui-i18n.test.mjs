@@ -15,6 +15,7 @@ const didProvenance = await readFile(new URL("../public/did-provenance.js", impo
 const provenanceRefresh = await readFile(new URL("../public/provenance-room-refresh.js", import.meta.url), "utf8");
 const liveObservatorySource = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const testnetToolkitSource = await readFile(new URL("../public/testnet-toolkit.js", import.meta.url), "utf8");
+const tclkWorkbenchSource = await readFile(new URL("../public/tclk-workbench.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const capacity = await readFile(new URL("../public/technocore-capacity.js", import.meta.url), "utf8");
 const languageBootstrap = await readFile(new URL("../public/language-bootstrap.js", import.meta.url), "utf8");
@@ -181,6 +182,15 @@ test("Testnet Toolkit and Live Observatory update locale without replacing user 
   assert.match(liveObservatorySource, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>\s*\{\s*rdApplyLiveLocale\(event\.detail\?\.lang\)/);
   assert.match(liveObservatorySource, /if \(nav\) nav\.textContent = rdLiveT\.nav/);
   assert.match(liveObservatorySource, /function rdApplyLiveLocale\([\s\S]*?rdRenderAll\(\)/);
+});
+
+test("TCLK workbench rerenders every static label and retained transcript on shared locale changes", () => {
+  const tclk = tclkWorkbenchSource;
+  assert.match(tclk, /function rdTclkApplyLocale\([\s\S]*?rdTclkT\(\)/);
+  assert.match(tclk, /set\("\.rd-tclk-head p",t\.intro\)/);
+  assert.match(tclk, /set\("\.rd-tclk-note",t\.source\)/);
+  assert.match(tclk, /rdTclkRenderTranscript\(rdTclkLastMessages\)/);
+  assert.match(tclk, /window\.addEventListener\("rd:languagechange",rdTclkApplyLocale\)/);
 });
 
 test("sequential browser suites share one loopback preview and reject production origins", () => {

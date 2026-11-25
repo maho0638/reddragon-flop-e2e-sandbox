@@ -203,9 +203,10 @@ function setupChecklist() {
 function upgradeAgentSetup() {
   const card = document.querySelector('[data-step="11"]');
   if (!card || $("#rdQuickSetup")) return;
+  const isEn = window.RD_I18N?.language() === "en";
 
   const warning = card.querySelector(".warning-box span");
-  if (warning) warning.textContent = "Heartbeat yaklaşık 30 dakikada bir kontrol edilir. Signed check-in yalnızca günde iki ayrı cron penceresinde çalışır; manuel/push testleri signed mesaj göndermez.";
+  if (warning) warning.textContent = window.RD_I18N.t("app.agentCadence");
 
   const didSecretBtn = $("#copyDidSecret");
   if (didSecretBtn?.parentElement) didSecretBtn.parentElement.classList.add("rd-hidden");
@@ -215,7 +216,7 @@ function upgradeAgentSetup() {
   const oldGuide = $("#copyAutoGuide");
   if (oldGuide) {
     const replacement = oldGuide.cloneNode(true);
-    replacement.textContent = "Hızlı kurulum listesini kopyala";
+    replacement.textContent = isEn ? "Copy quick setup checklist" : "Hızlı kurulum listesini kopyala";
     oldGuide.replaceWith(replacement);
     replacement.onclick = () => copy(setupChecklist(), "Kurulum listesi kopyalandı");
   }
@@ -225,30 +226,32 @@ function upgradeAgentSetup() {
     repoBtn.href = REPO_URL;
     repoBtn.target = "_blank";
     repoBtn.rel = "noreferrer";
-    repoBtn.textContent = "GitHub repo'yu aç";
+    repoBtn.textContent = isEn ? "Open GitHub repository" : "GitHub repo'yu aç";
     repoBtn.classList.remove("disabled-link");
   }
 
   const autoOut = $("#autoOut");
-  if (autoOut) autoOut.textContent = "Ajan fork-safe: DID private key'den otomatik türetilir. Kullanıcı yalnızca private-key GitHub Secret'ini ekler.";
+  if (autoOut) autoOut.textContent = isEn
+    ? "Fork-safe agent: the DID is derived from the private key. The user adds only the private-key GitHub Secret."
+    : "Fork-safe ajan: DID private key'den otomatik türetilir. Kullanıcı yalnızca private-key GitHub Secret'ini ekler.";
 
   const panel = document.createElement("div");
   panel.id = "rdQuickSetup";
   panel.className = "rd-quick-setup";
   panel.innerHTML = `
-    <h3>Hızlı güvenli ajan kurulumu</h3>
-    <p>Hiç kod bilmeden: repoyu forkla → tek secret'i ekle → Actions'ı çalıştır. Site GitHub tokeni istemez ve private key'i hiçbir URL'ye koymaz.</p>
+    <h3>${isEn ? "Quick secure agent setup" : "Hızlı güvenli ajan kurulumu"}</h3>
+    <p>${isEn ? "No coding: fork the repository → add one secret → run Actions. The site never asks for a GitHub token or puts your private key in a URL." : "Hiç kod bilmeden: repoyu forkla → tek secret'i ekle → Actions'ı çalıştır. Site GitHub tokeni istemez ve private key'i hiçbir URL'ye koymaz."}</p>
     <div class="rd-quick-form">
-      <input id="rdGithubUser" autocomplete="off" placeholder="GitHub kullanıcı adın" />
-      <input id="rdGithubRepo" autocomplete="off" value="reddragon-technocore" placeholder="Fork repo adı" />
+      <input id="rdGithubUser" autocomplete="off" placeholder="${isEn ? "Your GitHub username" : "GitHub kullanıcı adın"}" />
+      <input id="rdGithubRepo" autocomplete="off" value="reddragon-technocore" placeholder="${isEn ? "Fork repository name" : "Fork repo adı"}" />
     </div>
     <div class="rd-quick-actions">
-      <a href="${REPO_URL}/fork" target="_blank" rel="noreferrer">1 · Repoyu Forkla</a>
-      <button type="button" id="rdOpenSecrets">2 · Secret sayfasını aç</button>
-      <button type="button" id="rdCopyPrivate">3 · Private key'i kopyala</button>
-      <button type="button" id="rdOpenActions">4 · Actions'ı aç / test et</button>
+      <a href="${REPO_URL}/fork" target="_blank" rel="noreferrer">${isEn ? "1 · Fork repository" : "1 · Repoyu Forkla"}</a>
+      <button type="button" id="rdOpenSecrets">${isEn ? "2 · Open Secrets page" : "2 · Secret sayfasını aç"}</button>
+      <button type="button" id="rdCopyPrivate">${isEn ? "3 · Copy private key" : "3 · Private key'i kopyala"}</button>
+      <button type="button" id="rdOpenActions">${isEn ? "4 · Open / test Actions" : "4 · Actions'ı aç / test et"}</button>
     </div>
-    <div class="rd-security-note"><b>Güvenlik kuralı</b>RedDragon GitHub şifreni, tokenini veya wallet seed phrase'ini istemez. Private key'i yalnızca kendi GitHub repondaki <b>Actions Secret</b> alanına sen yapıştırırsın. Private key RedDragon sunucusuna gönderilmez ve public GitHub dosyalarına yazılmaz.</div>`;
+    <div class="rd-security-note"><b>${isEn ? "Security rule" : "Güvenlik kuralı"}</b>${isEn ? "RedDragon never asks for your GitHub password, token or wallet seed phrase. Paste your private key only into the Actions Secret field in your own GitHub repository. The private key is not sent to RedDragon servers or written to public GitHub files." : "RedDragon GitHub şifreni, tokenini veya wallet seed phrase'ini istemez. Private key'i yalnızca kendi GitHub repondaki Actions Secret alanına sen yapıştırırsın. Private key RedDragon sunucusuna gönderilmez ve public GitHub dosyalarına yazılmaz."}</div>`;
   card.appendChild(panel);
 
   $("#rdGithubUser").value = localStorage.getItem("rd-github-user") || "";

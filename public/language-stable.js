@@ -60,9 +60,12 @@ function buildSwitcher() {
       button.addEventListener("click", () => {
         const next = button.dataset.lang;
         if (next !== "tr" && next !== "en") return;
-        if (window.RD_I18N?.setLanguage) window.RD_I18N.setLanguage(next);
-        else { try { localStorage.setItem(LANG_KEY, next); } catch {} }
-        location.reload();
+        if (window.RD_I18N?.setLanguage) {
+          window.RD_I18N.setLanguage(next);
+        } else {
+          try { localStorage.setItem(LANG_KEY, next); } catch {}
+          location.reload();
+        }
       });
     });
   }

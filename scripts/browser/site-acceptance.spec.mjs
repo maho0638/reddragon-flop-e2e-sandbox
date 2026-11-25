@@ -270,8 +270,14 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.match((await proofDownloadEvent).suggestedFilename(), /reddragon-proof-.*\.json/);testedActions++;
     await page.locator("#copyProof").click();
     assert.match(await page.evaluate(() => navigator.clipboard.readText()), /"did":\s*"did:key:z6Mk/);testedActions++;
+    await page.locator("#rdLangSwitcher button[data-lang='tr']").click();
+    await page.waitForFunction(() => document.documentElement.lang === "tr");
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "switching language must preserve the ephemeral DID");
+    assert.equal(await page.locator("#xShare").isEnabled(), true, "switching language must preserve the enabled proof action");
     await page.locator("#rdLangSwitcher button[data-lang='en']").click();
     await page.waitForFunction(() => document.documentElement.lang === "en");
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "switching back must preserve the same DID");
+    assert.equal(await page.locator("#xShare").isEnabled(), true, "switching back must preserve the enabled proof action");
     const unexpectedPopups = [];
     page.on("popup", popup => unexpectedPopups.push(popup));
     const pageCountBeforeShare = context.pages().length;
@@ -285,6 +291,8 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
     assert.equal(context.pages().length, pageCountBeforeShare, "English share must not create a new page");testedActions++;
     await page.locator("#rdLangSwitcher button[data-lang='tr']").click();
     await page.waitForFunction(() => document.documentElement.lang === "tr");
+    assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "language switching must preserve the in-memory DID");
+    assert.equal(await page.locator("#xShare").isEnabled(), true, "language switching must preserve the enabled proof action");
     await page.locator("#xShare").click();
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes("Technocore ajan kimliğimi oluşturdum"));
     shareText = await page.evaluate(() => navigator.clipboard.readText());

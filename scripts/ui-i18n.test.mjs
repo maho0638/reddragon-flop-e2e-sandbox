@@ -65,6 +65,11 @@ test("onboarding and proof-import UI copy uses shared translations in both langu
   }
   for (const key of ["agentSustainable", "agentCadence", "privateKeyHint"]) assert.ok(languageStable.includes(`app.${key}`));
   assert.ok(proofImport.includes('window.RD_I18N.t("app.proofImportNote")'));
+  assert.match(proofImport, /const isEn = window\.RD_I18N\?\.language\(\) === "en"/);
+  assert.ok(proofImport.includes('isEn ? "Import Public Proof JSON"'));
+  assert.ok(proofImport.includes('isEn ? "Check by sequence"'));
+  assert.match(enhancements, /repoBtn\.textContent = isEn \? "Open GitHub repository"/);
+  assert.match(enhancements, /warning\.textContent = window\.RD_I18N\.t\("app\.agentCadence"\)/);
 });
 
 test("TR/EN visible labels and dynamic live copy use the selected locale", () => {
@@ -136,7 +141,7 @@ test("shared language setter stores preference and html lang before dispatch", (
   assert.deepEqual(order, [["tr", "tr", "tr"]]);
 });
 
-test("both pages select and render the saved language before add-on loading", () => {
+test("both pages boot the saved language early and live switching preserves the current session", () => {
   for (const html of [indexHtml, flopHtml]) {
     assert.match(html, /<script src="\/language-bootstrap\.js"><\/script>/);
     assert.ok(html.indexOf("/language-bootstrap.js") < html.indexOf("<\/head>"));
@@ -148,6 +153,8 @@ test("both pages select and render the saved language before add-on loading", ()
   assert.match(languageStable, /window\.addEventListener\("rd:languagechange"/);
   assert.match(config, /window\.dispatchEvent\(new Event\("rd:addonsready"\)\)/);
   assert.match(languageStable, /window\.addEventListener\("rd:addonsready"/);
+  assert.match(languageStable, /if \(window\.RD_I18N\?\.setLanguage\) \{\s*window\.RD_I18N\.setLanguage\(next\);\s*\} else \{[\s\S]*location\.reload\(\);/);
+  assert.doesNotMatch(languageStable, /window\.RD_I18N\.setLanguage\(next\)[\s\S]{0,80}location\.reload\(\)/);
 });
 
 test("sandbox browser workflow is QA-only, read-only, and contains no production smoke command", () => {

@@ -121,3 +121,10 @@ Updated: 2026-11-25 (Europe/Istanbul)
 - Current relay safety status: the rate limiter remains an in-process `Map` (60 reads/minute, 10 writes/minute per instance). The two-worker regression demonstrates each worker independently grants its own quota, so a shared global quota is **not** implemented. Risk remains **medium**; no paid service or external storage was enabled. Public key/value data is not ownership proof.
 - No live DID creation, key handling, Technocore write, wallet action, Vercel deployment, or main-branch change occurred.
 - Next: keep the 404 visible until there is an explicitly tested application-level optional-record handling design; any future change must keep missing owner status visibly unverified and retain a regression asserting the behavior. Rate-limit sharing remains blocked under the zero-cost constraint pending an actually available shared store or documented platform control.
+
+
+## Follow-up safety observation — 2026-11-25
+
+- Current source main was rechecked at `5ec154cbfa6409b1f2ed59b9c0fe24a8f59661c8`; production remains on deployment `dpl_6iSHHMBD5x4CqpbickyMA5WwTCTG`, commit `7d86ba81a115b8acbaee24e15cd0b752592392a0`. This audit made no main change and no Vercel deployment.
+- Main contains a separate scheduled workflow `.github/workflows/flop-testnet-first-claim.yml` with an hourly cron. Existing Actions run `45587729165` (attempt 2) reported a Testnet faucet submission, state `submitted-not-finalized`, with a transaction hash. This run predated and was not started by the production audit. We did not rerun it or perform any wallet action. The latest branch run listing showed one run for that workflow at inspection time; the cron remains configured, so future automation is a separate unresolved user-control item.
+- The GitHub Actions page was read-only and signed out, so the workflow schedule was not changed. No secret value was viewed or logged.

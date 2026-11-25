@@ -209,6 +209,18 @@ test("main page boots from empty storage and translates in desktop and mobile", 
       assert.equal((await page.locator("#helloText").inputValue()).startsWith("Merhaba Technocore!"), true, "Turkish default message must be localized");
       await page.locator("#createBtn").click();
       assert.equal((await page.locator("#toast").textContent()).trim(), "Parola en az 12 karakter olmalı.");
+      const ledgerDid = page.locator("#rdLedgerDid");
+      await ledgerDid.fill(didOther);
+      await activate(page.locator('#rdLangSwitcher button[data-lang="en"]'), viewport);
+      await page.waitForFunction(() => document.documentElement.lang === "en");
+      assert.equal(await ledgerDid.inputValue(), didOther, `${viewport.name} language change preserves Testnet Toolkit input`);
+      assert.equal((await page.locator("#rdTestnetToolkit h2").textContent()).trim(), "Are you testnet-ready?");
+      assert.equal((await page.locator("#rdLiveNav").textContent()).trim(), "Live");
+      await assertVisibleCopyLocale(page, "en", `${viewport.name}/home-live-panels`);
+      await activate(page.locator('#rdLangSwitcher button[data-lang="tr"]'), viewport);
+      await page.waitForFunction(() => document.documentElement.lang === "tr");
+      assert.equal(await ledgerDid.inputValue(), didOther, `${viewport.name} reverse language change preserves Testnet Toolkit input`);
+      assert.equal((await page.locator("#rdTestnetToolkit h2").textContent()).trim(), "Testnet'e hazır mısın?");
       await assertNoHorizontalOverflow(page);
       assert.deepEqual(errors, [], `${viewport.name} page errors`);
     } finally { await context.close(); }

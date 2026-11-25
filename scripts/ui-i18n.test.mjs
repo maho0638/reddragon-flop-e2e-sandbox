@@ -13,6 +13,8 @@ const config = await readFile(new URL("../public/config.js", import.meta.url), "
 const proofImport = await readFile(new URL("../public/proof-import.js", import.meta.url), "utf8");
 const didProvenance = await readFile(new URL("../public/did-provenance.js", import.meta.url), "utf8");
 const provenanceRefresh = await readFile(new URL("../public/provenance-room-refresh.js", import.meta.url), "utf8");
+const liveObservatorySource = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
+const testnetToolkitSource = await readFile(new URL("../public/testnet-toolkit.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const capacity = await readFile(new URL("../public/technocore-capacity.js", import.meta.url), "utf8");
 const languageBootstrap = await readFile(new URL("../public/language-bootstrap.js", import.meta.url), "utf8");
@@ -81,7 +83,7 @@ test("TR/EN visible labels and dynamic live copy use the selected locale", () =>
   assert.equal(exactEN.get("İsteğe bağlı"), "Optional");
   assert.equal(exactEN.get("Henüz özel oda yok."), "No private room yet.");
   const liveTr = liveObservatory.slice(liveObservatory.indexOf("  tr: {"), liveObservatory.indexOf("  en: {"));
-  const liveEn = liveObservatory.slice(liveObservatory.indexOf("  en: {"), liveObservatory.indexOf("const rdLiveT"));
+  const liveEn = liveObservatory.slice(liveObservatory.indexOf("  en: {"), liveObservatory.indexOf("let rdLiveT"));
   const keys = copy => [...copy.matchAll(/^\s+([A-Za-z][\w]*):/gm)].map(match => match[1]).filter(key => key !== "tr" && key !== "en").sort();
   assert.deepEqual(keys(liveTr), keys(liveEn), "every live-observatory label must have TR and EN entries");
   for (const phrase of ["nav: \"Canlı\"", "title: \"Canlı Ajan Gözlemevi\"", "signed: \"İmzalı ajan\"", "heartbeat: \"nabız\"", "active: \"etkin\"", "idle: \"beklemede\"", "stale: \"güncelliğini yitirmiş\"", "activity: \"Son herkese açık etkinlik\""]) assert.ok(liveTr.includes(phrase), `missing Turkish live label ${phrase}`);
@@ -168,6 +170,16 @@ test("Public Proof and DID provenance re-render both locales without navigation"
   assert.match(provenanceRefresh, /if \(rdProvFixBuild\(\)\) rdProvFixRefresh\(\)/);
   assert.match(provenanceRefresh, /verifierRoom\.value\s*=\s*previousRoom\s*\|\|\s*RD_PROV_FIX_ROOM/);
   assert.match(languageStable, /if \(window\.RD_I18N\?\.setLanguage\) \{\s*window\.RD_I18N\.setLanguage\(next\);\s*\} else \{[\s\S]*?location\.reload\(\)/);
+});
+
+test("Testnet Toolkit and Live Observatory update locale without replacing user state", () => {
+  assert.match(testnetToolkitSource, /window\.addEventListener\("rd:languagechange",\s*rdTestnetApplyLocale\)/);
+  assert.match(testnetToolkitSource, /function rdTestnetApplyLocale\(\)[\s\S]*?rdLedgerRender\(\);rdMinerCalc\(\);rdValidatorCalc\(\)/);
+  assert.match(testnetToolkitSource, /set\("\.rd-testnet-head h2",t\.title\)/);
+  assert.match(liveObservatorySource, /let rdLiveT\s*=\s*rdLiveCopy\[rdLiveLang\(\)\]/);
+  assert.match(liveObservatorySource, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>\s*\{\s*rdApplyLiveLocale\(event\.detail\?\.lang\)/);
+  assert.match(liveObservatorySource, /if \(nav\) nav\.textContent = rdLiveT\.nav/);
+  assert.match(liveObservatorySource, /function rdApplyLiveLocale\([\s\S]*?rdRenderAll\(\)/);
 });
 
 test("sandbox browser workflow is QA-only, read-only, and contains no production smoke command", () => {

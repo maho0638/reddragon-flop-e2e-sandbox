@@ -11,6 +11,8 @@ const enhancements = await readFile(new URL("../public/enhancements.js", import.
 const languageStable = await readFile(new URL("../public/language-stable.js", import.meta.url), "utf8");
 const config = await readFile(new URL("../public/config.js", import.meta.url), "utf8");
 const proofImport = await readFile(new URL("../public/proof-import.js", import.meta.url), "utf8");
+const didProvenance = await readFile(new URL("../public/did-provenance.js", import.meta.url), "utf8");
+const provenanceRefresh = await readFile(new URL("../public/provenance-room-refresh.js", import.meta.url), "utf8");
 const liveObservatory = await readFile(new URL("../public/live-observatory.js", import.meta.url), "utf8");
 const capacity = await readFile(new URL("../public/technocore-capacity.js", import.meta.url), "utf8");
 const languageBootstrap = await readFile(new URL("../public/language-bootstrap.js", import.meta.url), "utf8");
@@ -155,6 +157,17 @@ test("both pages boot the saved language early and live switching preserves the 
   assert.match(languageStable, /window\.addEventListener\("rd:addonsready"/);
   assert.match(languageStable, /if \(window\.RD_I18N\?\.setLanguage\) \{\s*window\.RD_I18N\.setLanguage\(next\);\s*\} else \{[\s\S]*location\.reload\(\);/);
   assert.doesNotMatch(languageStable, /window\.RD_I18N\.setLanguage\(next\)[\s\S]{0,80}location\.reload\(\)/);
+});
+
+test("Public Proof and DID provenance re-render both locales without navigation", () => {
+  assert.match(didProvenance, /let rdProvT\s*=\s*rdProvCatalog\[rdProvLang\(\)\]/);
+  assert.match(didProvenance, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>\s*\{\s*rdProvApplyLocale\(event\.detail\?\.lang\)/);
+  assert.match(didProvenance, /result\.dataset\.localeKey\s*=\s*Number\(error\?\.status\)\s*===\s*404\s*\?\s*"notFound"\s*:\s*"requestFailed"/);
+  assert.match(provenanceRefresh, /let rdProvFixT\s*=\s*RD_PROV_FIX_CATALOG\[rdProvFixLang\(\)\]/);
+  assert.match(provenanceRefresh, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>/);
+  assert.match(provenanceRefresh, /if \(rdProvFixBuild\(\)\) rdProvFixRefresh\(\)/);
+  assert.match(provenanceRefresh, /verifierRoom\.value\s*=\s*previousRoom\s*\|\|\s*RD_PROV_FIX_ROOM/);
+  assert.match(languageStable, /if \(window\.RD_I18N\?\.setLanguage\) \{\s*window\.RD_I18N\.setLanguage\(next\);\s*\} else \{[\s\S]*?location\.reload\(\)/);
 });
 
 test("sandbox browser workflow is QA-only, read-only, and contains no production smoke command", () => {

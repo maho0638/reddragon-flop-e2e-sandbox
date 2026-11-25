@@ -238,10 +238,8 @@ test("step 11 warning copy stays separated and localized at all supported widths
 
       for (const locale of ["tr", "en"]) {
         if (await page.locator("html").getAttribute("lang") !== locale) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: "load" }),
-            page.locator('#rdLangSwitcher button[data-lang="' + locale + '"]').click()
-          ]);
+          await page.locator('#rdLangSwitcher button[data-lang="' + locale + '"]').click();
+          await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
         }
         const observed = await page.evaluate(() => ({
           htmlLang: document.documentElement.lang,

@@ -36,7 +36,7 @@ function buildSteps() {
 }
 function jump(n){ document.querySelector(`[data-step="${n}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}); }
 function toast(msg){ const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600); }
-window.addEventListener("rd:languagechange",()=>{const message=$("#toast");if(!message)return;clearTimeout(toast.t);message.textContent="";message.classList.remove("show");});
+if(typeof window.addEventListener==="function")window.addEventListener("rd:languagechange",()=>{const message=$("#toast");if(!message)return;clearTimeout(toast.t);message.textContent="";message.classList.remove("show");});
 function clean(text){ return String(text||"").replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/gu," ").replace(/\s+/g," ").trim(); }
 function b64u(bytes){ return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
 function fromB64u(s){ s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); }

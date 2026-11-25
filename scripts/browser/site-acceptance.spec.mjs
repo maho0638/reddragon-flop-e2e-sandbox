@@ -25,23 +25,32 @@ let testedActions = 0;
 let serverStdout = "";
 let serverStderr = "";
 before(async () => {
-  const port = 43_000 + Math.floor(Math.random() * 1_000);
-  LOCAL_ORIGIN = `http://127.0.0.1:${port}`;
-  previewServer = spawn(process.execPath, ["scripts/local-preview-server.mjs"], {
-    cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
-  });
-  previewServer.stdout.setEncoding("utf8").on("data", part => { serverStdout += part; });
-  previewServer.stderr.setEncoding("utf8").on("data", part => { serverStderr += part; });
-  const deadline = Date.now() + 8_000;
-  let localReady = false;
-  while (Date.now() < deadline) {
-    if (previewServer.exitCode !== null) throw new Error(`Local preview exited: ${serverStderr || serverStdout}`);
-    try {
-      if ((await fetch(LOCAL_ORIGIN, { signal: AbortSignal.timeout(500) })).ok) { localReady = true; break; }
-    } catch {}
-    await new Promise(resolve => setTimeout(resolve, 100));
+  const supplied = process.env.SITE_ACCEPTANCE_ORIGIN;
+  if (supplied) {
+    const url = new URL(supplied);
+    assert.equal(url.protocol, "http:", "E2E origin must be local HTTP");
+    assert.ok(["127.0.0.1", "localhost"].includes(url.hostname), "E2E may only target loopback, never production");
+    LOCAL_ORIGIN = url.origin;
+    assert.equal((await fetch(LOCAL_ORIGIN)).ok, true, "shared local preview must be reachable");
+  } else {
+    const port = 43_000 + Math.floor(Math.random() * 1_000);
+    LOCAL_ORIGIN = `http://127.0.0.1:${port}`;
+    previewServer = spawn(process.execPath, ["scripts/local-preview-server.mjs"], {
+      cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
+    });
+    previewServer.stdout.setEncoding("utf8").on("data", part => { serverStdout += part; });
+    previewServer.stderr.setEncoding("utf8").on("data", part => { serverStderr += part; });
+    const deadline = Date.now() + 8_000;
+    let localReady = false;
+    while (Date.now() < deadline) {
+      if (previewServer.exitCode !== null) throw new Error(`Local preview exited (${previewServer.exitCode ?? previewServer.signalCode}): ${serverStderr || serverStdout}`);
+      try {
+        if ((await fetch(LOCAL_ORIGIN, { signal: AbortSignal.timeout(500) })).ok) { localReady = true; break; }
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (!localReady) throw new Error(`Local preview did not become ready: ${serverStderr || serverStdout}`);
   }
-  if (!localReady) throw new Error(`Local preview did not become ready: ${serverStderr || serverStdout}`);
   browser = await chromium.launch({ headless: true });
 });
 after(async () => {

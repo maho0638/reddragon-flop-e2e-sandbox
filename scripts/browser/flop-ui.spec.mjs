@@ -114,14 +114,23 @@ async function assertVisibleCopyLocale(page, locale, label) {
 }
 
 before(async () => {
-  const port = 43_000 + Math.floor(Math.random() * 1_000);
-  baseURL = `http://127.0.0.1:${port}`;
-  server = spawn(process.execPath, ["scripts/local-preview-server.mjs"], {
-    cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
-  });
-  server.stdout.setEncoding("utf8").on("data", (part) => { serverStdout += part; });
-  server.stderr.setEncoding("utf8").on("data", (part) => { serverStderr += part; });
-  await waitForServer(server, baseURL);
+  const supplied = process.env.SITE_ACCEPTANCE_ORIGIN;
+  if (supplied) {
+    const url = new URL(supplied);
+    assert.equal(url.protocol, "http:", "E2E origin must be local HTTP");
+    assert.ok(["127.0.0.1", "localhost"].includes(url.hostname), "E2E may only target loopback, never production");
+    baseURL = url.origin;
+    assert.equal((await fetch(baseURL)).ok, true, "shared local preview must be reachable");
+  } else {
+    const port = 43_000 + Math.floor(Math.random() * 1_000);
+    baseURL = `http://127.0.0.1:${port}`;
+    server = spawn(process.execPath, ["scripts/local-preview-server.mjs"], {
+      cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
+    });
+    server.stdout.setEncoding("utf8").on("data", (part) => { serverStdout += part; });
+    server.stderr.setEncoding("utf8").on("data", (part) => { serverStderr += part; });
+    await waitForServer(server, baseURL);
+  }
   browser = await chromium.launch({ headless: true });
 });
 

@@ -22,6 +22,7 @@ const indexHtml = await readFile(new URL("../public/index.html", import.meta.url
 const flopHtml = await readFile(new URL("../public/flop.html", import.meta.url), "utf8");
 const browserWorkflow = await readFile(new URL("../.github/workflows/flop-site-browser-audit.yml", import.meta.url), "utf8");
 const siteAcceptance = await readFile(new URL("./browser/site-acceptance.spec.mjs", import.meta.url), "utf8");
+const flopUiSpec = await readFile(new URL("./browser/flop-ui.spec.mjs", import.meta.url), "utf8");
 const browserRunner = await readFile(new URL("./run-local-browser-acceptance.mjs", import.meta.url), "utf8");
 const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
 const context = { window: {}, localStorage: { getItem: () => "en" }, navigator: { language: "en-US" } };
@@ -180,6 +181,17 @@ test("Testnet Toolkit and Live Observatory update locale without replacing user 
   assert.match(liveObservatorySource, /window\.addEventListener\("rd:languagechange",\s*\(event\)\s*=>\s*\{\s*rdApplyLiveLocale\(event\.detail\?\.lang\)/);
   assert.match(liveObservatorySource, /if \(nav\) nav\.textContent = rdLiveT\.nav/);
   assert.match(liveObservatorySource, /function rdApplyLiveLocale\([\s\S]*?rdRenderAll\(\)/);
+});
+
+test("sequential browser suites share one loopback preview and reject production origins", () => {
+  assert.match(browserRunner, /await startPreview\(\)/);
+  assert.match(browserRunner, /SITE_ACCEPTANCE_ORIGIN:\s*origin/);
+  assert.match(browserRunner, /scripts\/local-preview-server\.mjs/);
+  for (const spec of [siteAcceptance, flopUiSpec]) {
+    assert.match(spec, /process\.env\.SITE_ACCEPTANCE_ORIGIN/);
+    assert.match(spec, /url\.protocol, "http:"/);
+    assert.match(spec, /\["127\.0\.0\.1", "localhost"\]\.includes\(url\.hostname\)/);
+  }
 });
 
 test("sandbox browser workflow is QA-only, read-only, and contains no production smoke command", () => {

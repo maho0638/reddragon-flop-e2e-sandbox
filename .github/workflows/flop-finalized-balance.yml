@@ -1,0 +1,53 @@
+name: RedDragon FLOP finalized balance read-only
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/flop-finalized-balance.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Query public finalized chain state without signer
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, hashlib, urllib.request
+          address = '5HBqG8RN2WMPKhwq4AfGEPRBGsn82JQc28JU5pKCYW2QZFtW'
+          genesis = '0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800'
+          alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+          n = 0
+          for c in address:
+              n = n * 58 + alphabet.index(c)
+          b = n.to_bytes((n.bit_length()+7)//8,'big')
+          assert len(b)==35 and b[0]==42 and hashlib.blake2b(b'SS58PRE'+b[:-2]).digest()[:2]==b[-2:]
+          pub = b[1:-2]
+          key = '0x26aa394eea5630e07c48ae0c9558cef7bb99d880ec681799c0cf30e8886371da9' + hashlib.blake2b(pub,digest_size=16).hexdigest() + pub.hex()
+          def rpc(method, params):
+              req = urllib.request.Request('https://testnet.flop.network/', data=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params}).encode(), headers={'Content-Type':'application/json'})
+              with urllib.request.urlopen(req, timeout=15) as res:
+                  answer = json.load(res)
+              if 'error' in answer: raise RuntimeError(str(answer['error']))
+              return answer['result']
+          assert rpc('chain_getBlockHash',[0]) == genesis, 'wrong network'
+          head = rpc('chain_getFinalizedHead',[])
+          header = rpc('chain_getHeader',[head])
+          props = rpc('system_properties',[])
+          version = rpc('state_getRuntimeVersion',[head])
+          raw = rpc('state_getStorage',[key,head])
+          result = {'address':address,'genesis':genesis,'finalizedHash':head,'finalizedHeight':int(header['number'],16),'properties':props,'specVersion':version['specVersion'],'storageKey':key,'accountRaw':raw}
+          if raw is None:
+              result['accountExists'] = False
+          else:
+              data=bytes.fromhex(raw[2:])
+              result['accountExists'] = True
+              if len(data)==80:
+                  result['standardAccountInfoFreeRaw']=str(int.from_bytes(data[16:32],'little'))
+                  result['standardAccountInfoReservedRaw']=str(int.from_bytes(data[32:48],'little'))
+              else:
+                  result['decodeStatus']='unrecognized AccountInfo size; do not infer balance'
+          print('FLOP_FINALIZED_ACCOUNT='+json.dumps(result))
+          PY

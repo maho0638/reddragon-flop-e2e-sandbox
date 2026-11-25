@@ -231,8 +231,11 @@ test("local identity, validation and signed UI workflows with mocked relay (NO e
       assert.fail(`restore password dialog did not open after selecting the downloaded .json backup: ${JSON.stringify(evidence)}`);
     }
     assert.match(restoreDialog.message(), /backup password|yedek parolasını/i);
+    const restoreOutcome = page.waitForFunction(() => /Identity restored|Kimlik geri yüklendi|backup could not be opened|Yedek açılamadı/i.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 30000 });
     await restoreDialog.accept("ephemeral-ui-audit-only-password");
-    await page.waitForFunction(() => /Identity restored|Kimlik geri yüklendi/.test(document.querySelector("#toast")?.textContent || ""));
+    await restoreOutcome;
+    const restoreMessage = (await page.locator("#toast").textContent()).trim();
+    assert.match(restoreMessage, /Identity restored|Kimlik geri yüklendi/, `encrypted restore must succeed, received: ${restoreMessage}`);
     assert.equal((await page.locator("#identityOut").textContent()).split("\n")[0].trim(), generatedDid, "encrypted backup restores the same public DID after keypair verification");testedActions++;
     await page.locator("#copyDidBtn").click();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), generatedDid);testedActions++;

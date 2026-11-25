@@ -163,4 +163,7 @@ test("sandbox browser workflow is QA-only, read-only, and contains no production
   assert.equal((browserRunner.match(/\.spec\.mjs/g) || []).length, 2);
   assert.ok(browserRunner.includes('spawnSync(process.execPath, ["--test", spec]'));
   assert.doesNotMatch(browserRunner, /Promise\.all|--test.*\*|production-smoke/);
+  assert.match(browserRunner, /failures\+\+/);
+  assert.match(browserRunner, /process\.exitCode = 1/);
+  assert.doesNotMatch(browserRunner, /process\.exit\(/);
 });

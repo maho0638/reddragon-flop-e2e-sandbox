@@ -128,3 +128,16 @@ Updated: 2026-11-25 (Europe/Istanbul)
 - Current source main was rechecked at `5ec154cbfa6409b1f2ed59b9c0fe24a8f59661c8`; production remains on deployment `dpl_6iSHHMBD5x4CqpbickyMA5WwTCTG`, commit `7d86ba81a115b8acbaee24e15cd0b752592392a0`. This audit made no main change and no Vercel deployment.
 - Main contains a separate scheduled workflow `.github/workflows/flop-testnet-first-claim.yml` with an hourly cron. Existing Actions run `45587729165` (attempt 2) reported a Testnet faucet submission, state `submitted-not-finalized`, with a transaction hash. This run predated and was not started by the production audit. We did not rerun it or perform any wallet action. The latest branch run listing showed one run for that workflow at inspection time; the cron remains configured, so future automation is a separate unresolved user-control item.
 - The GitHub Actions page was read-only and signed out, so the workflow schedule was not changed. No secret value was viewed or logged.
+
+## Site-only final production acceptance — 2026-11-25
+
+- Scope: RedDragon web UI production read-only audit only. No wallet, chain, faucet, trading, or unrelated automation actions were performed.
+- Production audited: `https://reddragon-technocore.vercel.app`; deployed site commit `7d86ba81a115b8acbaee24e15cd0b752592392a0`.
+- Sandbox QA test candidate: `35e0faca11cb3dc203440d24e5c63bb7c929245d`.
+- GitHub Actions run: `45636578795` — SUCCESS; [run log](https://github.com/maho0638/reddragon-flop-e2e-sandbox/actions/runs/45636578795).
+- Result: 16/16 home and `/flop` locale/viewport assertions passed for TR/EN and 320/390/768/1440 px. No horizontal overflow; no layout check failures.
+- CSP violations: 0. Uncaught page errors: 0. Unexpected console errors: 0. Blocked writes: 0.
+- The raw audit retained three HTTP 404 responses and their corresponding console events, all exactly matching `POST /api/relay`, `kvGet`, `room-owners`, key `d-reddragon-835ae177`. The deployed UI treats the absent optional ownership record as missing/unverified. No other HTTP or console error was exempted.
+- All 83 captured `net::ERR_ABORTED` requests in the UI matrix were correlated to an actual later main-document navigation generation; all other network failures remain fatal. The independent CSP gate recorded two such navigation cancellations and no unexplained failures.
+- Production site code was not changed; no Vercel deployment was created. Current production deployment remains `dpl_6iSHHMBD5x4CqpbickyMA5WwTCTG` (READY, commit `7d86ba81a115b8acbaee24e15cd0b752592392a0`).
+- Relay rate limit remains medium risk: the current `api/relay.js` uses per-process memory, 60 reads/minute and 10 writes/minute per instance. No shared provider or paid service was configured; a global cross-instance quota remains unsolved under the zero-cost/no-provider constraint.

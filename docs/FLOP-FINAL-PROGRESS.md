@@ -109,3 +109,15 @@ Updated: 2026-11-25 (Europe/Istanbul)
 - Next: change the sandbox production-audit workflow so the independent CSP gate runs after an audit failure when Chromium installation succeeded; update only its script hash and workflow conditions. The next sandbox run is read-only against production. Do not change the app until the 404 action is known.
 - Relay quota remains unresolved / medium risk. No shared quota service is configured and no billing-bearing change is authorized by the zero-budget constraint.
 - Preflight exit code 3 is intentional for official `live-unscored`: the report has `scoringActivated:false`; exit 1 is source/network failure and exit 2 is CLI usage error. Official docs show no activation block/date.
+
+
+## Production acceptance checkpoint — 2026-11-25
+
+- Sandbox QA HEAD for this audit: `3a14806c6205940638d2fed68e68cd8fb9f1eeb1`.
+- Production read-only Chromium run: [45629747675](https://github.com/maho0638/reddragon-flop-e2e-sandbox/actions/runs/45629747675), Ubuntu 24.04, Node 24.22.3, Chromium. Run conclusion: **FAIL**; no production code or deployment was changed.
+- UI matrix: **16/16 passed** (home and `/flop`; TR/EN; 320/390/768/1440). No horizontal overflow, wrong-language check failure, invalid link, CSS/image load failure, or step-11 geometry failure.
+- CSP: the separate gate completed both `/` and `/flop` transitions; **0 CSP violations**, **0 uncaught page errors**, and **0 blocked write attempts**. The strict-mode selector issue is fixed with the exact accessible name `Import Public Proof JSON`.
+- Remaining browser failure: a public, read-only `kvGet` for `room-owners/d-reddragon-835ae177` returns upstream HTTP 404 because no owner record exists. The browser recorded the 404 as a console/network error; the UI does not treat missing ownership as verified. The audit intentionally does not suppress or whitelist this response. Several `net::ERR_ABORTED` requests were caused by the planned route/viewport navigation and are recorded separately as navigation cancellations.
+- Current relay safety status: the rate limiter remains an in-process `Map` (60 reads/minute, 10 writes/minute per instance). The two-worker regression demonstrates each worker independently grants its own quota, so a shared global quota is **not** implemented. Risk remains **medium**; no paid service or external storage was enabled. Public key/value data is not ownership proof.
+- No live DID creation, key handling, Technocore write, wallet action, Vercel deployment, or main-branch change occurred.
+- Next: keep the 404 visible until there is an explicitly tested application-level optional-record handling design; any future change must keep missing owner status visibly unverified and retain a regression asserting the behavior. Rate-limit sharing remains blocked under the zero-cost constraint pending an actually available shared store or documented platform control.
